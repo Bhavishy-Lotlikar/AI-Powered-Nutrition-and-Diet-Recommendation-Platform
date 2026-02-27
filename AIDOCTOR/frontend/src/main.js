@@ -1,9 +1,10 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { VRMLoaderPlugin } from '@pixiv/three-vrm'
-let audioContext = null
-let analyser = null
-let dataArray 	= null
+window.speechSynthesis.onvoiceschanged = () => {
+  window.speechSynthesis.getVoices()
+}
+
 let currentVrm = null
 let speaking = false
 let time = 0
@@ -39,41 +40,95 @@ loader.load('/assets/doctor.vrm', (gltf) => {
   const vrm = gltf.userData.vrm
   currentVrm = vrm
 
-
-
-  // IMPORTANT: Adjust arm rest pose by modifying scene scale trick
-  vrm.scene.traverse(obj => {
-    if (obj.isBone && obj.name.includes('UpperArm')) {
-      obj.rotation.x = -1.2
-    }
-    if (obj.isBone && obj.name.includes('LowerArm')) {
-      obj.rotation.x = -0.4
-    }
-  })
-
   scene.add(vrm.scene)
+
 })
 
-// ---------------- SPEAK ----------------
+ 
+// ---------------- SPEECH RECOGNITION ----------------
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+const recognition = new SpeechRecognition()
+
+let isListening = false
+
+recognition.continuous = false
+recognition.interimResults = false
+recognition.lang = "en-US"
+
+recognition.onstart = () => {
+  isListening = true
+  console.log("🎤 Listening...")
+}
+
+recognition.onend = () => {
+  isListening = false
+  console.log("🛑 Listening stopped")
+}
+
+recognition.onresult = async (event) => {
+  const userText = event.results[0][0].transcript
+  console.log("User said:", userText)
+
+  const reply = await getGeminiReply(userText)
+  speak(reply)
+}
+
+recognition.onerror = (err) => {
+  console.error("Speech recognition error:", err)
+  isListening = false
+}
+
+// ---------------- BUTTON ----------------
+document.getElementById('speak-btn')?.addEventListener('click', () => {
+
+  if (!isListening) {
+    recognition.start()
+  } else {
+    console.log("Already listening...")
+  }
+
+})
+
+// ---------------- GEMINI PLACEHOLDER ----------------
+async function getGeminiReply(text) {
+
+  // Replace with real backend call later
+  return "Based on your question, I recommend a balanced diet with adequate protein and fiber."
+
+}
+
+// ---------------- TEXT TO SPEECH ----------------
 function speak(text) {
 
   window.speechSynthesis.cancel()
 
   const utterance = new SpeechSynthesisUtterance(text)
 
+  // Wait until voices are loaded
+  const voices = window.speechSynthesis.getVoices()
+
+  // Pick a better English voice
+  const preferredVoice = voices.find(v =>
+    v.name.includes("Google") || 
+    v.name.includes("Natural") ||
+    v.lang === "en-US"
+  )
+
+  if (preferredVoice) {
+    utterance.voice = preferredVoice
+  }
+
+  // Tune these for realism
+  utterance.rate = 0.95      // slightly slower
+  utterance.pitch = 1.1      // slightly softer tone
+  utterance.volume = 1
+
   utterance.onstart = () => {
     speaking = true
-
-    if (!audioContext) {
-      audioContext = new AudioContext()
-    }
-
-    const source = audioContext.createMediaStreamDestination()
   }
 
   utterance.onend = () => {
     speaking = false
-
     if (currentVrm) {
       currentVrm.expressionManager.setValue('aa', 0)
     }
@@ -82,8 +137,21 @@ function speak(text) {
   window.speechSynthesis.speak(utterance)
 }
 
+// ---------------- BUTTON ----------------
 document.getElementById('speak-btn')?.addEventListener('click', () => {
-  speak("Hello. I am your virtual nutrition doctor.")
+
+  try {
+    recognition.stop()
+  } catch (e) {}
+
+  setTimeout(() => {
+    try {
+      recognition.start()
+    } catch (e) {
+      console.log("Still starting…")
+    }
+  }, 300)
+
 })
 
 // ---------------- ANIMATION ----------------
@@ -95,60 +163,41 @@ function animate() {
 
     time += 0.02
 
-    // Let VRM update first
     currentVrm.update(0.016)
 
-    // Get RAW bones (not normalized)
     const humanoid = currentVrm.humanoid
 
+    // ---- FORCE A-POSE ----
     const lUpper = humanoid.getRawBoneNode('leftUpperArm')
     const rUpper = humanoid.getRawBoneNode('rightUpperArm')
     const lLower = humanoid.getRawBoneNode('leftLowerArm')
     const rLower = humanoid.getRawBoneNode('rightLowerArm')
 
-    // ---- HARD RESET ROTATIONS ----
-    if (lUpper) lUpper.rotation.set(0, 0, 0)
-    if (rUpper) rUpper.rotation.set(0, 0, 0)
-    if (lLower) lLower.rotation.set(0, 0, 0)
-    if (rLower) rLower.rotation.set(0, 0, 0)
+    if (lUpper) lUpper.rotation.set(0, 0, -0.9)
+    if (rUpper) rUpper.rotation.set(0, 0, 0.9)
+    if (lLower) lLower.rotation.set(-0.3, 0, 0)
+    if (rLower) rLower.rotation.set(-0.3, 0, 0)
 
-    // ---- FORCE A-POSE ----
-    if (lUpper) lUpper.rotation.z = -0.9
-    if (rUpper) rUpper.rotation.z = 0.9
-
-    if (lLower) lLower.rotation.x = -0.3
-    if (rLower) rLower.rotation.x = -0.3
-
-    // ---- IDLE SWAY ----
+    // ---- IDLE SWAY (NO DRIFT) ----
     const spine = humanoid.getRawBoneNode('spine')
     const head = humanoid.getRawBoneNode('head')
 
     if (spine) {
-      spine.rotation.x += Math.sin(time) * 0.02
-      spine.rotation.y += Math.sin(time * 0.5) * 0.05
+      spine.rotation.x = Math.sin(time) * 0.02
+      spine.rotation.y = Math.sin(time * 0.5) * 0.05
     }
 
     if (head) {
-      head.rotation.y += Math.sin(time * 0.5) * 0.03
+      head.rotation.y = Math.sin(time * 0.5) * 0.03
     }
 
     // ---- TALKING ----
     if (speaking) {
-
-  const speed = 12
-  const open = Math.abs(Math.sin(time * speed)) * 0.7
-
-  currentVrm.expressionManager.setValue('aa', open)
-  currentVrm.expressionManager.setValue('ee', open * 0.3)
-  currentVrm.expressionManager.setValue('oh', open * 0.2)
-
-} else {
-
-  currentVrm.expressionManager.setValue('aa', 0)
-  currentVrm.expressionManager.setValue('ee', 0)
-  currentVrm.expressionManager.setValue('oh', 0)
-
-}
+      const open = Math.abs(Math.sin(time * 10)) * 0.6
+      currentVrm.expressionManager.setValue('aa', open)
+    } else {
+      currentVrm.expressionManager.setValue('aa', 0)
+    }
 
   }
 
