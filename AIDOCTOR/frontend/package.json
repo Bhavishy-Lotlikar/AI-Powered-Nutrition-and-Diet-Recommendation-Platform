@@ -10,5 +10,9 @@
   },
   "devDependencies": {
     "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.5.0",
+    "three": "^0.183.1"
   }
 }
