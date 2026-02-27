@@ -14,6 +14,7 @@ function getWhatsAppClient() {
 function getEmailTransporter() {
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_APP_PASSWORD;
+    console.log('Email config check — USER:', user ? user : 'NOT SET', '| PASS:', pass ? '***' + pass.slice(-4) : 'NOT SET');
     if (!user || !pass) return null;
     return nodemailer.createTransport({
         service: 'gmail',
@@ -93,8 +94,18 @@ async function sendWhatsApp(phone, plan) {
 }
 
 async function sendEmail(email, plan) {
+    console.log('Attempting to send email to:', email);
     const transporter = getEmailTransporter();
     if (!transporter) throw new Error('Email not configured. Add EMAIL_USER and EMAIL_APP_PASSWORD to .env');
+
+    // Verify SMTP connection first
+    try {
+        await transporter.verify();
+        console.log('SMTP connection verified successfully');
+    } catch (verifyErr) {
+        console.error('SMTP verification failed:', verifyErr.message);
+        throw new Error(`Gmail SMTP connection failed: ${verifyErr.message}. Make sure EMAIL_APP_PASSWORD is a valid Gmail App Password (not your regular password). Generate one at: https://myaccount.google.com/apppasswords`);
+    }
 
     const info = await transporter.sendMail({
         from: `"NutriMind AI" <${process.env.EMAIL_USER}>`,
@@ -102,7 +113,7 @@ async function sendEmail(email, plan) {
         subject: `🏋️ Your Daily Workout — ${plan.focus || 'Full Body'}`,
         html: formatPlanAsHTML(plan),
     });
-    console.log('Email sent:', info.messageId);
+    console.log('Email sent successfully:', info.messageId);
     return info.messageId;
 }
 

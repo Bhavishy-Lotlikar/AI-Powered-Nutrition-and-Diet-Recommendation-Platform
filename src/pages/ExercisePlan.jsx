@@ -47,7 +47,7 @@ const ExercisePlan = () => {
                 fetchRecentPlans(user.id, 7)
             ]);
             if (todayPlan) { setPlan(todayPlan.full_response); setSaved(true); }
-            setRecentPlans(recent.filter(r => r.date !== new Date().toISOString().split('T')[0]));
+            setRecentPlans(recent);
         } catch (err) {
             console.error('Load error:', err);
         } finally {
@@ -217,7 +217,7 @@ const ExercisePlan = () => {
             {/* Recent Plans */}
             {recentPlans.length > 0 && (
                 <div className="mt-12">
-                    <h3 className="text-sm font-bold tracking-widest text-gray-400 uppercase mb-4">Past Plans</h3>
+                    <h3 className="text-sm font-bold tracking-widest text-gray-400 uppercase mb-4">Saved Workout Logs</h3>
                     <div className="space-y-3">
                         {recentPlans.map((rp) => (
                             <div key={rp.id} className="bg-white dark:bg-dark-800 rounded-2xl border border-gray-100 dark:border-dark-700 overflow-hidden">

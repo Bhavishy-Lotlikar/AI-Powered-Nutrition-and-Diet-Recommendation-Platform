@@ -6,20 +6,16 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 // Verify key is loaded at startup
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey || apiKey === 'paste_your_gemini_api_key_here') {
-    console.error('ERROR: GEMINI_API_KEY is not set in .env file!');
-    console.error('Please add your key to:', path.resolve(__dirname, '../../.env'));
+const apiKey = process.env.OPENROUTER_API_KEY;
+if (!apiKey) {
+    console.error('WARNING: OPENROUTER_API_KEY is not set in .env file!');
 } else {
-    console.log('Gemini API Key loaded: ***' + apiKey.slice(-4));
+    console.log('OpenRouter API Key loaded: ***' + apiKey.slice(-4));
 }
 
 const { generateFromImage } = require('./services/geminiService');
-<<<<<<< Updated upstream
-=======
 const { generateExercisePlan } = require('./services/exerciseService');
 const { startScheduler } = require('./services/schedulerService');
->>>>>>> Stashed changes
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,9 +43,9 @@ app.post('/analyze-image', async (req, res) => {
         }
 
         // Check for API key
-        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'paste_your_gemini_api_key_here') {
+        if (!process.env.OPENROUTER_API_KEY) {
             return res.status(503).json({
-                error: 'Gemini API key not configured. Please add your GEMINI_API_KEY to the .env file.',
+                error: 'OpenRouter API key not configured. Please add your OPENROUTER_API_KEY to the .env file.',
             });
         }
 
@@ -168,8 +164,6 @@ Health score: fat_loss penalizes high cal/fat/sugar; muscle_gain rewards high pr
     }
 });
 
-<<<<<<< Updated upstream
-=======
 /**
  * POST /generate-exercise
  */
@@ -177,8 +171,8 @@ app.post('/generate-exercise', async (req, res) => {
     try {
         const { calories, protein, carbs, fats, goal, activityLevel, height, weight } = req.body;
 
-        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'paste_your_gemini_api_key_here') {
-            return res.status(503).json({ error: 'Gemini API key not configured.' });
+        if (!process.env.OPENROUTER_API_KEY) {
+            return res.status(503).json({ error: 'OpenRouter API key not configured.' });
         }
 
         console.log('Generating exercise plan...');
@@ -199,8 +193,8 @@ app.post('/send-exercise-now', async (req, res) => {
     try {
         const { calories, protein, carbs, fats, goal, activityLevel, height, weight, notificationMethod, whatsappNumber, email } = req.body;
 
-        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'paste_your_gemini_api_key_here') {
-            return res.status(503).json({ error: 'Gemini API key not configured.' });
+        if (!process.env.OPENROUTER_API_KEY) {
+            return res.status(503).json({ error: 'OpenRouter API key not configured.' });
         }
 
         console.log('Generating exercise plan for immediate delivery...');
@@ -243,16 +237,80 @@ app.post('/send-exercise-now', async (req, res) => {
     }
 });
 
->>>>>>> Stashed changes
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+/**
+ * POST /generate-recommendations
+ * AI-powered nutrition recommendations based on consumed vs goals
+ */
+app.post('/generate-recommendations', async (req, res) => {
+    try {
+        const { consumed, goals } = req.body;
+
+        if (!process.env.OPENROUTER_API_KEY) {
+            return res.status(503).json({ error: 'OpenRouter API key not configured.' });
+        }
+
+        const prompt = `You are a world-class certified nutritionist and dietitian with 20 years of experience.
+
+A user has logged their meals for today. Based on their consumed nutrients vs daily goals, suggest personalized meals and foods to avoid.
+
+CONSUMED TODAY:
+- Calories: ${consumed.calories || 0} kcal (Goal: ${goals.calories || 2200} kcal)
+- Protein: ${consumed.protein || 0}g (Goal: ${goals.protein || 90}g)
+- Carbs: ${consumed.carbs || 0}g (Goal: ${goals.carbs || 275}g)
+- Fat: ${consumed.fat || 0}g (Goal: ${goals.fat || 65}g)
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "summary": "1-2 sentence personalized assessment of their nutrition status today",
+  "recommended": [
+    { "name": "Meal name", "desc": "Why this meal helps fill their gaps (1 sentence)", "calories": 300, "protein": 25, "carbs": 30, "fat": 8, "tags": ["High Protein", "Quick Prep"] }
+  ],
+  "avoid": [
+    { "name": "Food to avoid", "reason": "Why they should avoid this today (1 sentence)" }
+  ],
+  "tips": ["1 actionable nutrition tip for them"]
+}
+
+Give 4-5 recommended meals and 3 foods to avoid. Be specific with Indian and international food options. Tailor recommendations to fill their nutritional gaps.`;
+
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'http://localhost:5173',
+                'X-Title': 'NutriMind',
+            },
+            body: JSON.stringify({
+                model: 'google/gemini-2.5-flash',
+                max_tokens: 1000,
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`OpenRouter API error ${response.status}: ${errBody}`);
+        }
+
+        const data = await response.json();
+        const raw = data.choices[0].message.content;
+        const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        console.log('Recommendations generated');
+        res.json(parsed);
+    } catch (err) {
+        console.error('Recommendations error:', err.message);
+        res.status(500).json({ error: err.message || 'Failed to generate recommendations.' });
+    }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\nNurtiMind API running at http://0.0.0.0:${PORT}\n`);
-<<<<<<< Updated upstream
-=======
     startScheduler();
->>>>>>> Stashed changes
 });

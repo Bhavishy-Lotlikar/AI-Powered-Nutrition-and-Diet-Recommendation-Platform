@@ -23,18 +23,11 @@ const Navbar = () => {
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Food Scanner', path: '/food-detection' },
         { name: 'Analysis', path: '/nutrition-analysis' },
-<<<<<<< Updated upstream
-        { name: 'Health', path: '/predictive-health' },
-        { name: 'Recommendations', path: '/recommendations' },
-        { name: 'Insights', path: '/health-insights' },
-        { name: 'AI Avatar', path: '/ai-demo' },
-=======
         { name: 'Exercise', path: '/exercise-plan' },
         { name: 'Health', path: '/predictive-health' },
         { name: 'Recommendations', path: '/recommendations' },
-        { name: 'Insights', path: '/health-insights' },
+        { name: 'AI Consultant', path: '/health-insights' },
         { name: 'Profile', path: '/profile' },
->>>>>>> Stashed changes
     ];
 
     const getLinkClasses = ({ isActive }) => clsx(

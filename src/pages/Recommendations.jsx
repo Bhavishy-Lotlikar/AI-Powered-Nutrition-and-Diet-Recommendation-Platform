@@ -1,136 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Leaf, Ban, MapPin, Loader2, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Leaf, Ban, Loader2, TrendingUp, AlertTriangle, RefreshCw, Lightbulb, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { fetchTodaysMeals } from '../api/mealApi';
 import { fetchNutritionGoals } from '../api/summaryApi';
 
-// Recommendation engine — picks foods based on what nutrients are lacking
-const FOOD_DATABASE = {
-    highProtein: [
-        { name: 'Grilled Chicken Breast', desc: 'Lean protein powerhouse — 31g protein per 100g', tags: ['High Protein', 'Low Fat'], calories: 165, protein: 31, carbs: 0, fat: 3.6 },
-        { name: 'Greek Yogurt + Nuts', desc: 'Probiotics + protein + healthy fats for gut health', tags: ['High Protein', 'Quick Prep'], calories: 180, protein: 15, carbs: 8, fat: 9 },
-        { name: 'Eggs (3) + Spinach', desc: 'Complete amino acids with iron and B12', tags: ['High Protein', 'Budget Pick'], calories: 240, protein: 21, carbs: 3, fat: 15 },
-        { name: 'Paneer Tikka', desc: 'Vegetarian protein bomb — 18g protein per 100g', tags: ['High Protein', 'Vegetarian'], calories: 260, protein: 18, carbs: 5, fat: 20 },
-        { name: 'Tuna Salad Bowl', desc: 'Omega-3 rich with lean protein and fresh veggies', tags: ['High Protein', 'Omega-3'], calories: 200, protein: 26, carbs: 5, fat: 8 },
-    ],
-    lowCalorie: [
-        { name: 'Mixed Green Salad + Vinaigrette', desc: 'Fiber-rich, low-calorie with essential vitamins', tags: ['Low Calorie', 'Fiber Rich'], calories: 120, protein: 4, carbs: 12, fat: 6 },
-        { name: 'Grilled Fish + Steamed Veggies', desc: 'Lean and clean — packed with omega-3 and minerals', tags: ['Low Calorie', 'Omega-3'], calories: 220, protein: 28, carbs: 8, fat: 8 },
-        { name: 'Cucumber & Hummus', desc: 'Light snack with healthy fats and plant protein', tags: ['Low Calorie', 'Quick Prep'], calories: 100, protein: 4, carbs: 8, fat: 6 },
-    ],
-    ironRich: [
-        { name: 'Spinach & Lentil Soup', desc: 'Iron-rich, fiber-packed, and budget-friendly', tags: ['Iron Rich', 'Budget Pick'], calories: 180, protein: 12, carbs: 28, fat: 2 },
-        { name: 'Chickpea & Beetroot Bowl', desc: 'Plant-based iron with vitamin C for better absorption', tags: ['Iron Rich', 'Vegetarian'], calories: 220, protein: 10, carbs: 35, fat: 5 },
-        { name: 'Liver & Onions', desc: 'Highest bioavailable iron source — 6mg per 100g', tags: ['Iron Rich', 'High Protein'], calories: 175, protein: 26, carbs: 4, fat: 5 },
-    ],
-    highFiber: [
-        { name: 'Oatmeal + Berries + Seeds', desc: 'Soluble fiber for heart health and energy', tags: ['High Fiber', 'Quick Prep'], calories: 280, protein: 10, carbs: 45, fat: 8 },
-        { name: 'Brown Rice + Rajma', desc: 'Complete protein with fiber for sustained energy', tags: ['High Fiber', 'Budget Pick'], calories: 320, protein: 14, carbs: 55, fat: 3 },
-        { name: 'Mixed Fruit Bowl + Flaxseed', desc: 'Antioxidants, vitamins, and digestive fiber', tags: ['High Fiber', 'Quick Prep'], calories: 180, protein: 4, carbs: 38, fat: 5 },
-    ],
-    balanced: [
-        { name: 'Grilled Salmon Bowl', desc: 'High in Omega-3, Vitamin D, and lean protein', tags: ['Balanced', 'Omega-3'], calories: 350, protein: 30, carbs: 25, fat: 14 },
-        { name: 'Avocado Toast + Egg', desc: 'Balanced macros with healthy fats for sustained energy', tags: ['Balanced', 'Quick Prep'], calories: 310, protein: 14, carbs: 28, fat: 18 },
-        { name: 'Chicken Stir-Fry + Brown Rice', desc: 'Balanced protein, carbs, and veggies in one meal', tags: ['Balanced', 'High Protein'], calories: 420, protein: 28, carbs: 45, fat: 12 },
-    ],
-};
-
-const AVOID_DATABASE = {
-    highCalorie: [
-        { name: 'Fried Fast Food', reason: 'Extremely calorie-dense — a single meal can exceed your daily fat target' },
-        { name: 'Sugary Drinks & Sodas', reason: 'Empty calories and high fructose lead to energy crashes and fat storage' },
-        { name: 'Creamy Pasta Dishes', reason: 'High in saturated fat and refined carbs — switch to whole wheat with olive oil' },
-    ],
-    highFat: [
-        { name: 'Deep Fried Snacks', reason: 'Trans fats from frying damage cardiovascular health over time' },
-        { name: 'Heavy Cream Sauces', reason: 'Saturated fat overload — substitute with yogurt-based sauces' },
-    ],
-    highCarb: [
-        { name: 'White Bread & Refined Flour', reason: 'Spikes blood sugar rapidly — switch to whole grain or multigrain' },
-        { name: 'Sugary Cereals', reason: 'Added sugars cause energy crashes — switch to oats or muesli' },
-        { name: 'Candy & Desserts', reason: 'Simple sugars provide zero nutrition — opt for dark chocolate or fruit' },
-    ],
-    lowProtein: [
-        { name: 'Plain Rice Meals', reason: 'Almost no protein — always pair rice with dal, chicken, or eggs' },
-        { name: 'Bread-Heavy Sandwiches', reason: 'More bread than filling — increase protein fillings like turkey or tofu' },
-    ],
-};
-
-function generateRecommendations(consumed, goals) {
-    const recs = [];
-    const avoids = [];
-
-    const calPct = goals.calories ? consumed.calories / goals.calories : 0.5;
-    const proPct = goals.protein ? consumed.protein / goals.protein : 0.5;
-    const carbPct = goals.carbs ? consumed.carbs / goals.carbs : 0.5;
-    const fatPct = goals.fat ? consumed.fat / goals.fat : 0.5;
-
-    // Need more protein
-    if (proPct < 0.7) {
-        recs.push(...FOOD_DATABASE.highProtein.slice(0, 3));
-        avoids.push(...AVOID_DATABASE.lowProtein);
-    }
-
-    // Over on calories
-    if (calPct > 0.85) {
-        recs.push(...FOOD_DATABASE.lowCalorie.slice(0, 2));
-        avoids.push(...AVOID_DATABASE.highCalorie.slice(0, 2));
-    }
-
-    // Over on fat
-    if (fatPct > 0.8) {
-        avoids.push(...AVOID_DATABASE.highFat);
-    }
-
-    // Over on carbs
-    if (carbPct > 0.8) {
-        avoids.push(...AVOID_DATABASE.highCarb.slice(0, 2));
-    }
-
-    // Under on everything (haven't eaten much yet)
-    if (calPct < 0.4) {
-        recs.push(...FOOD_DATABASE.balanced.slice(0, 2));
-        recs.push(...FOOD_DATABASE.highFiber.slice(0, 1));
-    }
-
-    // Iron rich if low on protein and carbs
-    if (proPct < 0.5 && carbPct < 0.5) {
-        recs.push(...FOOD_DATABASE.ironRich.slice(0, 2));
-    }
-
-    // Always add at least some balanced options
-    if (recs.length < 3) {
-        recs.push(...FOOD_DATABASE.balanced);
-    }
-    if (avoids.length === 0) {
-        avoids.push({ name: 'Processed Snacks', reason: 'Generally low in nutrients — opt for whole foods instead' });
-    }
-
-    // Deduplicate by name
-    const uniqueRecs = [...new Map(recs.map(r => [r.name, r])).values()].slice(0, 5);
-    const uniqueAvoids = [...new Map(avoids.map(a => [a.name, a])).values()].slice(0, 4);
-
-    return { recommended: uniqueRecs, avoid: uniqueAvoids };
-}
-
-function getSummaryMessage(consumed, goals) {
-    const calPct = goals.calories ? consumed.calories / goals.calories : 0;
-    const proPct = goals.protein ? consumed.protein / goals.protein : 0;
-
-    const gaps = [];
-    if (proPct < 0.6) gaps.push(`protein (${consumed.protein}g / ${goals.protein}g)`);
-    if (calPct < 0.4) gaps.push(`calories (${consumed.calories} / ${goals.calories} kcal)`);
-
-    if (gaps.length > 0) return `You're low on ${gaps.join(' and ')}. The meals below are specifically chosen to fill these gaps.`;
-    if (calPct > 1) return `You've exceeded your calorie target. Focus on light, protein-rich foods for the rest of the day.`;
-    return `You're on track! The recommendations below will help you finish strong today.`;
-}
+const AI_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const Recommendations = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [generating, setGenerating] = useState(false);
     const [todaysMeals, setTodaysMeals] = useState([]);
-    const [goals, setGoals] = useState({ calories: 2200, protein: 90, carbs: 275, fat: 65, fiber: 25 });
+    const [goals, setGoals] = useState({ calories: 2200, protein: 90, carbs: 275, fat: 65 });
+    const [aiResult, setAiResult] = useState(null);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -149,7 +32,6 @@ const Recommendations = () => {
                 protein: savedGoals.protein || 90,
                 carbs: savedGoals.carbs || 275,
                 fat: savedGoals.fat || 65,
-                fiber: savedGoals.fiber || 25,
             });
         } catch (err) {
             console.error('Failed to load data:', err);
@@ -165,9 +47,6 @@ const Recommendations = () => {
         fat: acc.fat + (Number(m.fats) || 0),
     }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [todaysMeals]);
 
-    const { recommended, avoid } = useMemo(() => generateRecommendations(consumed, goals), [consumed, goals]);
-    const summaryMsg = useMemo(() => getSummaryMessage(consumed, goals), [consumed, goals]);
-
     // Past meal recommendations from logged data
     const pastRecs = useMemo(() => {
         return todaysMeals
@@ -176,28 +55,61 @@ const Recommendations = () => {
             .slice(0, 3);
     }, [todaysMeals]);
 
+    const handleGenerate = async () => {
+        setGenerating(true);
+        setError(null);
+        try {
+            const response = await fetch(`${AI_BASE_URL}/generate-recommendations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consumed, goals })
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to generate recommendations.');
+            }
+            const data = await response.json();
+            setAiResult(data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setGenerating(false);
+        }
+    };
+
     if (loading) {
-        return (
-            <div className="min-h-[50vh] flex items-center justify-center">
-                <Loader2 className="text-primary-500 animate-spin" size={32} />
-            </div>
-        );
+        return <div className="min-h-[50vh] flex items-center justify-center"><Loader2 className="text-primary-500 animate-spin" size={32} /></div>;
     }
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Recommendations</h1>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Personalized meal suggestions based on your nutrition gaps today.</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">AI-powered meal suggestions based on your nutrition gaps today.</p>
 
-            {/* Summary Banner */}
-            <div className="bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-900/30 rounded-2xl p-4 mb-8 flex items-start gap-3">
-                <TrendingUp className="text-primary-500 shrink-0 mt-0.5" size={20} />
-                <p className="text-sm text-primary-800 dark:text-primary-300 font-medium">{summaryMsg}</p>
+            {error && (
+                <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
+                    <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={20} />
+                    <p className="text-sm text-red-700 dark:text-red-400 font-medium">{error}</p>
+                </div>
+            )}
+
+            {/* Today's Nutrition Status */}
+            <div className="bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-900/30 rounded-2xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="text-primary-500" size={18} />
+                    <span className="text-sm font-bold text-primary-800 dark:text-primary-300">Today's Intake</span>
+                </div>
+                <div className="grid grid-cols-4 gap-3 text-center">
+                    <div><p className="text-lg font-bold text-gray-900 dark:text-white">{consumed.calories}</p><p className="text-xs text-gray-500">/ {goals.calories} kcal</p></div>
+                    <div><p className="text-lg font-bold text-gray-900 dark:text-white">{consumed.protein}g</p><p className="text-xs text-gray-500">/ {goals.protein}g prot</p></div>
+                    <div><p className="text-lg font-bold text-gray-900 dark:text-white">{consumed.carbs}g</p><p className="text-xs text-gray-500">/ {goals.carbs}g carbs</p></div>
+                    <div><p className="text-lg font-bold text-gray-900 dark:text-white">{consumed.fat}g</p><p className="text-xs text-gray-500">/ {goals.fat}g fat</p></div>
+                </div>
             </div>
 
-            {/* AI Recommendations from Past Meals */}
+            {/* AI Insights from Past Meals */}
             {pastRecs.length > 0 && (
-                <div className="mb-10">
+                <div className="mb-8">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">AI Insights from Your Meals</h2>
                     <div className="space-y-3">
                         {pastRecs.map((r, i) => (
@@ -210,65 +122,114 @@ const Recommendations = () => {
                 </div>
             )}
 
-            {/* Recommended Meals */}
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Eat This Next</h2>
-            <div className="space-y-4 mb-10">
-                {recommended.map(meal => (
-                    <div key={meal.name} className="bg-white dark:bg-dark-800 p-5 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm flex items-start gap-4">
-                        <div className="bg-primary-100 dark:bg-primary-900/30 p-3 rounded-2xl flex-shrink-0">
-                            <Leaf className="text-primary-500" size={22} />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-start justify-between">
-                                <h3 className="font-bold text-gray-900 dark:text-white mb-1">{meal.name}</h3>
-                                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{meal.calories} kcal</span>
-                            </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{meal.desc}</p>
-                            <div className="flex gap-2 flex-wrap">
-                                {meal.tags.map(tag => (
-                                    <span key={tag} className="text-xs font-semibold px-2.5 py-1 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400 rounded-full">{tag}</span>
-                                ))}
-                                <span className="text-xs px-2.5 py-1 bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-gray-400 rounded-full">P:{meal.protein}g C:{meal.carbs}g F:{meal.fat}g</span>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {/* Generate Button */}
+            {!aiResult && !generating && (
+                <button
+                    onClick={handleGenerate}
+                    className="w-full py-5 bg-gradient-to-br from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-bold rounded-3xl transition-all shadow-lg shadow-primary-500/25 flex items-center justify-center gap-3 text-lg mb-8"
+                >
+                    <Sparkles size={22} /> Get AI Nutrition Recommendations
+                </button>
+            )}
 
-            {/* Avoid Foods */}
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Avoid Today</h2>
-            <div className="space-y-4 mb-10">
-                {avoid.map(food => (
-                    <div key={food.name} className="bg-white dark:bg-dark-800 p-5 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-sm flex items-start gap-4">
-                        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl flex-shrink-0">
-                            <Ban className="text-red-500" size={22} />
+            {/* Generating State */}
+            {generating && (
+                <div className="bg-primary-50/50 dark:bg-primary-900/10 rounded-3xl p-12 text-center border border-primary-100 dark:border-primary-900/30 mb-8">
+                    <Loader2 className="text-primary-500 animate-spin mx-auto mb-4" size={40} />
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating Recommendations...</h3>
+                    <p className="text-gray-500 dark:text-gray-400">NutriMind AI is analyzing your nutrition gaps and finding the perfect meals.</p>
+                </div>
+            )}
+
+            {/* AI Results */}
+            {aiResult && (
+                <div className="space-y-8">
+                    {/* Summary */}
+                    {aiResult.summary && (
+                        <div className="bg-gradient-to-br from-dark-800 to-primary-900/40 rounded-3xl p-6 text-white">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Sparkles className="text-primary-400" size={18} />
+                                <span className="text-sm font-bold text-primary-400 uppercase tracking-wider">AI Assessment</span>
+                            </div>
+                            <p className="text-gray-300 leading-relaxed">{aiResult.summary}</p>
                         </div>
+                    )}
+
+                    {/* Recommended Meals */}
+                    {aiResult.recommended?.length > 0 && (
                         <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-1">{food.name}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{food.reason}</p>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Eat This Next</h2>
+                            <div className="space-y-4">
+                                {aiResult.recommended.map((meal, i) => (
+                                    <div key={i} className="bg-white dark:bg-dark-800 p-5 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm flex items-start gap-4">
+                                        <div className="bg-primary-100 dark:bg-primary-900/30 p-3 rounded-2xl flex-shrink-0">
+                                            <Leaf className="text-primary-500" size={22} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between">
+                                                <h3 className="font-bold text-gray-900 dark:text-white mb-1">{meal.name}</h3>
+                                                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{meal.calories} kcal</span>
+                                            </div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{meal.desc}</p>
+                                            <div className="flex gap-2 flex-wrap">
+                                                {meal.tags?.map(tag => (
+                                                    <span key={tag} className="text-xs font-semibold px-2.5 py-1 bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400 rounded-full">{tag}</span>
+                                                ))}
+                                                <span className="text-xs px-2.5 py-1 bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-gray-400 rounded-full">P:{meal.protein}g C:{meal.carbs}g F:{meal.fat}g</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    )}
 
-            {/* Budget-Friendly Suggestions */}
-            <div className="bg-white dark:bg-dark-800 p-6 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-xl">
-                        <MapPin className="text-blue-500" size={20} />
-                    </div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Budget-Friendly Options</h2>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Affordable meals that match your nutritional needs:</p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                    {['Chana Dal (Chickpea Curry)', 'Mixed Veg Omelette', 'Brown Rice + Rajma', 'Banana + Peanut Butter'].map(name => (
-                        <div key={name} className="bg-gray-50 dark:bg-dark-700 px-4 py-3 rounded-2xl flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{name}</span>
-                            <span className="text-xs text-primary-600 dark:text-primary-400 font-bold">Budget Pick</span>
+                    {/* Avoid Foods */}
+                    {aiResult.avoid?.length > 0 && (
+                        <div>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Avoid Today</h2>
+                            <div className="space-y-4">
+                                {aiResult.avoid.map((food, i) => (
+                                    <div key={i} className="bg-white dark:bg-dark-800 p-5 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-sm flex items-start gap-4">
+                                        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl flex-shrink-0">
+                                            <Ban className="text-red-500" size={22} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-900 dark:text-white mb-1">{food.name}</h3>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{food.reason}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    ))}
+                    )}
+
+                    {/* Tips */}
+                    {aiResult.tips?.length > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Lightbulb className="text-amber-500" size={18} />
+                                <span className="text-sm font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pro Tips</span>
+                            </div>
+                            <ul className="space-y-2">
+                                {aiResult.tips.map((tip, i) => (
+                                    <li key={i} className="text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                                        <span className="text-amber-500 mt-0.5">•</span> {tip}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {/* Regenerate Button */}
+                    <button
+                        onClick={() => { setAiResult(null); handleGenerate(); }}
+                        className="w-full py-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2"
+                    >
+                        <RefreshCw size={18} /> Regenerate Recommendations
+                    </button>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

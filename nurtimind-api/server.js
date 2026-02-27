@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { generateFromImage } = require('./services/geminiService');
 
@@ -52,9 +52,9 @@ app.post('/analyze-image', async (req, res) => {
         }
 
         // Check for API key
-        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
+        if (!process.env.OPENROUTER_API_KEY) {
             return res.status(503).json({
-                error: 'Gemini API key not configured. Please add your GEMINI_API_KEY to the .env file.',
+                error: 'OpenRouter API key not configured. Please add your OPENROUTER_API_KEY to the .env file.',
             });
         }
 
