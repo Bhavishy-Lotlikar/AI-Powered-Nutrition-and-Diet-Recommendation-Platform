@@ -15,6 +15,11 @@ if (!apiKey || apiKey === 'paste_your_gemini_api_key_here') {
 }
 
 const { generateFromImage } = require('./services/geminiService');
+<<<<<<< Updated upstream
+=======
+const { generateExercisePlan } = require('./services/exerciseService');
+const { startScheduler } = require('./services/schedulerService');
+>>>>>>> Stashed changes
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -163,6 +168,82 @@ Health score: fat_loss penalizes high cal/fat/sugar; muscle_gain rewards high pr
     }
 });
 
+<<<<<<< Updated upstream
+=======
+/**
+ * POST /generate-exercise
+ */
+app.post('/generate-exercise', async (req, res) => {
+    try {
+        const { calories, protein, carbs, fats, goal, activityLevel, height, weight } = req.body;
+
+        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'paste_your_gemini_api_key_here') {
+            return res.status(503).json({ error: 'Gemini API key not configured.' });
+        }
+
+        console.log('Generating exercise plan...');
+        const plan = await generateExercisePlan({ calories, protein, carbs, fats, goal, activityLevel, height, weight });
+        console.log('Exercise plan generated:', plan.focus);
+        res.json(plan);
+    } catch (err) {
+        console.error('Exercise generation error:', err.message);
+        res.status(500).json({ error: err.message || 'Failed to generate exercise plan.' });
+    }
+});
+
+/**
+ * POST /send-exercise-now
+ * Generates a plan AND immediately sends it via WhatsApp/Email
+ */
+app.post('/send-exercise-now', async (req, res) => {
+    try {
+        const { calories, protein, carbs, fats, goal, activityLevel, height, weight, notificationMethod, whatsappNumber, email } = req.body;
+
+        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'paste_your_gemini_api_key_here') {
+            return res.status(503).json({ error: 'Gemini API key not configured.' });
+        }
+
+        console.log('Generating exercise plan for immediate delivery...');
+        const plan = await generateExercisePlan({ calories, protein, carbs, fats, goal, activityLevel, height, weight });
+        console.log('Plan generated:', plan.focus);
+
+        const results = { plan, sent: false, method: notificationMethod };
+        const { sendWhatsApp, sendEmail } = require('./services/notificationService');
+
+        // Send via WhatsApp if number is provided
+        if (whatsappNumber) {
+            try {
+                await sendWhatsApp(whatsappNumber, plan);
+                results.sent = true;
+                results.whatsappSent = true;
+                console.log('WhatsApp sent to', whatsappNumber);
+            } catch (waErr) {
+                console.error('WhatsApp send failed:', waErr.message);
+                results.whatsappError = waErr.message;
+            }
+        }
+
+        // Also send via email if available
+        if (email) {
+            try {
+                await sendEmail(email, plan);
+                results.sent = true;
+                results.emailSent = true;
+                console.log('Email sent to', email);
+            } catch (emErr) {
+                console.error('Email send failed:', emErr.message);
+                results.emailError = emErr.message;
+            }
+        }
+
+        res.json(results);
+    } catch (err) {
+        console.error('Send exercise error:', err.message);
+        res.status(500).json({ error: err.message || 'Failed to generate and send exercise plan.' });
+    }
+});
+
+>>>>>>> Stashed changes
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -170,4 +251,8 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\nNurtiMind API running at http://0.0.0.0:${PORT}\n`);
+<<<<<<< Updated upstream
+=======
+    startScheduler();
+>>>>>>> Stashed changes
 });

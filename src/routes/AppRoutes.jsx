@@ -12,6 +12,11 @@ import {
     PredictiveHealth,
     Recommendations,
     HealthInsights,
+<<<<<<< Updated upstream
+=======
+    ExercisePlan,
+    Profile,
+>>>>>>> Stashed changes
     AIDemo,
     AuthPage,
     NotFound
@@ -52,6 +57,11 @@ const AppRoutes = () => {
                     <Route path="predictive-health" element={<PredictiveHealth />} />
                     <Route path="recommendations" element={<Recommendations />} />
                     <Route path="health-insights" element={<HealthInsights />} />
+<<<<<<< Updated upstream
+=======
+                    <Route path="exercise-plan" element={<ExercisePlan />} />
+                    <Route path="profile" element={<Profile />} />
+>>>>>>> Stashed changes
                 </Route>
 
                 {/* 404 Route */}

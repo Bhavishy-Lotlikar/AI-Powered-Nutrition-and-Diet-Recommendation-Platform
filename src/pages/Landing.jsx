@@ -18,8 +18,17 @@ const FeatureCard = ({ icon: Icon, title, description }) => (
             <div className="bg-primary-500/10 border border-primary-500/20 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Icon className="text-primary-500" size={26} />
             </div>
+<<<<<<< Updated upstream
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{title}</h3>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm flex-1">{description}</p>
+=======
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                {title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm flex-1">
+                {description}
+            </p>
+>>>>>>> Stashed changes
         </div>
     </GlareHover>
 );
@@ -33,7 +42,10 @@ const Landing = () => {
 
             {/* Why NutriMind Section */}
             <section className="py-32 relative">
+<<<<<<< Updated upstream
                 {/* RippleGrid background layer */}
+=======
+>>>>>>> Stashed changes
                 <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 dark:opacity-60">
                     <RippleGrid
                         enableRainbow={false}
@@ -54,9 +66,17 @@ const Landing = () => {
                         <span className="inline-block py-1 px-3 mb-4 text-xs font-semibold tracking-wider text-primary-500 uppercase rounded-full border border-primary-500/30 bg-primary-500/10">
                             Core Features
                         </span>
+<<<<<<< Updated upstream
                         <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                             Why NutriMind?
                         </h2>
+=======
+
+                        <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
+                            Why NutriMind?
+                        </h2>
+
+>>>>>>> Stashed changes
                         <p className="text-lg text-gray-600 dark:text-gray-400">
                             Leverage cutting-edge AI to transform your health journey. From your plate to your performance.
                         </p>
@@ -68,11 +88,19 @@ const Landing = () => {
                             title="AI Food Recognition"
                             description="Snap a photo of your meal and get an instant, accurate calorie and macro breakdown powered by computer vision."
                         />
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
                         <FeatureCard
                             icon={ScanLine}
                             title="QR Code Analysis"
                             description="Instantly scan barcodes at the grocery store to uncover hidden ingredients, additives, and nutritional value before you buy."
                         />
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
                         <FeatureCard
                             icon={BellRing}
                             title="Predictive Alerts"
@@ -87,7 +115,11 @@ const Landing = () => {
                 <div className="max-w-4xl mx-auto">
                     <div className="bg-gradient-to-br from-dark-800 to-dark-900 rounded-[2.5rem] p-12 text-center relative overflow-hidden shadow-2xl border border-white/5">
 
+<<<<<<< Updated upstream
                         {/* Decorative RippleGrid inside the CTA card */}
+=======
+                        {/* Ripple background */}
+>>>>>>> Stashed changes
                         <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none opacity-40">
                             <RippleGrid
                                 enableRainbow={false}
@@ -108,31 +140,62 @@ const Landing = () => {
                         <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
                         <div className="relative z-10 flex flex-col items-center">
+<<<<<<< Updated upstream
                             <div className="bg-primary-500/15 border border-primary-500/30 p-4 rounded-2xl mb-8 backdrop-blur-md">
                                 <Rocket className="text-primary-400" size={32} />
                             </div>
                             <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
                                 Ready to transform your diet?
                             </h2>
+=======
+
+                            <div className="bg-primary-500/15 border border-primary-500/30 p-4 rounded-2xl mb-8 backdrop-blur-md">
+                                <Rocket className="text-primary-400" size={32} />
+                            </div>
+
+                            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+                                Ready to transform your diet?
+                            </h2>
+
+>>>>>>> Stashed changes
                             <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
                                 Join thousands of users who have optimized their nutrition with AI.
                                 Start your 14-day free trial today.
                             </p>
+<<<<<<< Updated upstream
                             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center max-w-md mx-auto sm:max-w-none">
                                 {/* Primary CTA with StarBorder */}
+=======
+
+                            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+
+                                {/* Primary Button */}
+>>>>>>> Stashed changes
                                 <StarBorder
                                     as="button"
                                     color="#22c55e"
                                     speed="4s"
+<<<<<<< Updated upstream
                                     className="w-full sm:w-auto max-w-[280px]"
                                 >
                                     <span className="flex items-center gap-2 font-bold tracking-wide">
                                     Start Your Free Trial
+=======
+                                    className="w-[240px] h-[56px] flex items-center justify-center"
+                                >
+                                    <span className="flex items-center gap-2 font-bold tracking-wide text-sm">
+
+                                        Free Trial
+>>>>>>> Stashed changes
                                         <ArrowRight size={18} />
                                     </span>
                                 </StarBorder>
 
+<<<<<<< Updated upstream
                                 {/* Secondary button with GlareHover */}
+=======
+                                {/* Secondary Button */}
+>>>>>>> Stashed changes
                                 <GlareHover
                                     background="rgba(255,255,255,0.05)"
                                     borderRadius="20px"
@@ -142,6 +205,7 @@ const Landing = () => {
                                     transitionDuration={600}
                                     style={{ border: '1px solid rgba(255,255,255,0.15)' }}
                                 >
+<<<<<<< Updated upstream
                                     <button className="px-7 py-4 text-white font-semibold text-sm tracking-wide w-full whitespace-nowrap">
                                         View Pricing
                                     </button>
@@ -150,6 +214,19 @@ const Landing = () => {
                             <p className="text-sm text-gray-500 mt-6 tracking-wide">
                                 No credit card required. Cancel anytime.
                             </p>
+=======
+                                    <button className="w-full h-11 flex flex-col sm:flex-row gap-4 justify-center items-center">
+                                        View Pricing
+                                    </button>
+                                </GlareHover>
+
+                            </div>
+
+                            <p className="text-sm text-gray-500 mt-6 tracking-wide">
+                                No credit card required. Cancel anytime.
+                            </p>
+
+>>>>>>> Stashed changes
                         </div>
                     </div>
                 </div>
@@ -159,4 +236,8 @@ const Landing = () => {
     );
 };
 
+<<<<<<< Updated upstream
 export default Landing;
+=======
+export default Landing;
+>>>>>>> Stashed changes
