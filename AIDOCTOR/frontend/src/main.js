@@ -8,31 +8,22 @@ let speaking = false
 let time = 0
 let blinkTimer = 0
 
-//TEXT BOX
-function addUserMessage(text) {
-  const log = document.getElementById("chat-log")
-  const msg = document.createElement("div")
-  msg.className = "chat-user"
-  msg.textContent = "You: " + text
-  log.appendChild(msg)
-  log.scrollTop = log.scrollHeight
+/* ================= OVERLAY TEXT FUNCTIONS ================= */
+
+function setHeard(text) {
+  document.getElementById("heard-text").textContent = text
 }
 
-function addAIMessage(text) {
-  const log = document.getElementById("chat-log")
-  const msg = document.createElement("div")
-  msg.className = "chat-ai"
-  msg.textContent = "Doctor: " + text
-  log.appendChild(msg)
-  log.scrollTop = log.scrollHeight
+function setReply(text) {
+  document.getElementById("reply-text").textContent = text
 }
 
 function setStatus(text) {
   document.getElementById("chat-status").textContent = text
 }
 
+/* ================= SCENE ================= */
 
-// ---------------- SCENE ----------------
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
@@ -54,7 +45,8 @@ const light = new THREE.DirectionalLight(0xffffff, 1)
 light.position.set(1, 1, 1)
 scene.add(light)
 
-// ---------------- LOAD MODEL ----------------
+/* ================= LOAD MODEL ================= */
+
 const loader = new GLTFLoader()
 loader.register(parser => new VRMLoaderPlugin(parser))
 
@@ -63,26 +55,36 @@ loader.load('/assets/doctor.vrm', (gltf) => {
   scene.add(currentVrm.scene)
 })
 
-// ---------------- SPEECH RECOGNITION ----------------
+/* ================= SPEECH RECOGNITION ================= */
+
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 const recognition = new SpeechRecognition()
 
 recognition.lang = "en-US"
 recognition.interimResults = false
 
+recognition.onstart = () => {
+  setStatus("Listening...")
+}
+
 recognition.onresult = async (event) => {
 
   const userText = event.results[0][0].transcript
 
-  addUserMessage(userText)
+  setHeard(userText)
+  setReply("")
   setStatus("Thinking...")
 
   const reply = await getGeminiReply(userText)
 
-  addAIMessage(reply)
+  setReply(reply)
   setStatus("Speaking...")
 
   speak(reply)
+}
+
+recognition.onerror = () => {
+  setStatus("Error")
 }
 
 document.getElementById('speak-btn')?.addEventListener('click', () => {
@@ -90,7 +92,8 @@ document.getElementById('speak-btn')?.addEventListener('click', () => {
   setTimeout(() => recognition.start(), 300)
 })
 
-// ---------------- TTS + AUDIO ANALYSIS ----------------
+/* ================= TTS + AUDIO ANALYSIS ================= */
+
 let audioContext = null
 let analyser = null
 let dataArray = null
@@ -122,7 +125,6 @@ async function speak(text) {
       audioContext = new (window.AudioContext || window.webkitAudioContext)()
     }
 
-    // Important: disconnect old source
     if (sourceNode) {
       sourceNode.disconnect()
     }
@@ -137,21 +139,24 @@ async function speak(text) {
     analyser.connect(audioContext.destination)
 
     audio.onplay = () => speaking = true
+
     audio.onended = () => {
-  speaking = false
-  currentVrm?.expressionManager.setValue('aa', 0)
-  setStatus("Ready")
-}
+      speaking = false
+      currentVrm?.expressionManager.setValue('aa', 0)
+      setStatus("Ready")
+    }
 
     await audio.play()
 
   } catch (err) {
     console.error(err)
     speaking = false
+    setStatus("TTS Error")
   }
 }
 
-// ---------------- ANIMATION ----------------
+/* ================= ANIMATION LOOP ================= */
+
 function animate() {
 
   requestAnimationFrame(animate)
@@ -165,7 +170,7 @@ function animate() {
 
     const humanoid = currentVrm.humanoid
 
-    // ---- FORCE A-POSE ----
+    /* A-POSE FIX */
     const lUpper = humanoid.getRawBoneNode('leftUpperArm')
     const rUpper = humanoid.getRawBoneNode('rightUpperArm')
     const lLower = humanoid.getRawBoneNode('leftLowerArm')
@@ -176,7 +181,7 @@ function animate() {
     if (lLower) lLower.rotation.set(-0.3, 0, 0)
     if (rLower) rLower.rotation.set(-0.3, 0, 0)
 
-    // ---- BREATHING ----
+    /* BREATHING */
     const spine = humanoid.getRawBoneNode('spine')
     const head = humanoid.getRawBoneNode('head')
 
@@ -185,7 +190,7 @@ function animate() {
       spine.rotation.y = Math.sin(time * 0.4) * 0.05
     }
 
-    // ---- BLINKING ----
+    /* BLINK */
     if (blinkTimer > 3 + Math.random() * 2) {
       currentVrm.expressionManager.setValue('blink', 1)
     }
@@ -194,7 +199,7 @@ function animate() {
       blinkTimer = 0
     }
 
-    // ---- TALKING (Real Audio Sync + Smooth + Head Nod) ----
+    /* TALKING */
     if (speaking && analyser && dataArray) {
 
       analyser.getByteFrequencyData(dataArray)
@@ -227,7 +232,8 @@ function animate() {
 
 animate()
 
-// ---------------- RESIZE ----------------
+/* ================= RESIZE ================= */
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
