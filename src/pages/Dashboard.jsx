@@ -1,22 +1,9 @@
-import React from 'react';
-import { Activity, Droplets, Flame, Dumbbell } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Activity, Droplets, Flame, Dumbbell, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-const weeklyData = [
-    { day: 'Mon', calories: 1800 },
-    { day: 'Tue', calories: 2100 },
-    { day: 'Wed', calories: 1750 },
-    { day: 'Thu', calories: 2300 },
-    { day: 'Fri', calories: 1950 },
-    { day: 'Sat', calories: 2150 },
-    { day: 'Sun', calories: 1600 },
-];
-
-const macroData = [
-    { name: 'Protein', value: 30 },
-    { name: 'Carbs', value: 50 },
-    { name: 'Fats', value: 20 },
-];
+import { useAuth } from '../context/AuthContext';
+import { fetchMeals, fetchTodaysMeals } from '../api/mealApi';
+import { fetchNutritionGoals } from '../api/summaryApi';
 
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b'];
 
@@ -36,16 +23,118 @@ const StatCard = ({ title, value, unit, icon: Icon, color }) => (
 );
 
 const Dashboard = () => {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [todaysMeals, setTodaysMeals] = useState([]);
+    const [allMeals, setAllMeals] = useState([]);
+    const [goals, setGoals] = useState(null);
+
+    useEffect(() => {
+        loadData();
+    }, [user]);
+
+    const loadData = async () => {
+        if (!user?.id) { setLoading(false); return; }
+        try {
+            const [today, all, savedGoals] = await Promise.all([
+                fetchTodaysMeals(user.id),
+                fetchMeals(user.id),
+                fetchNutritionGoals(user.id)
+            ]);
+            setTodaysMeals(today || []);
+            setAllMeals(all || []);
+            setGoals(savedGoals);
+        } catch (err) {
+            console.error('Failed to load dashboard data:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Today's totals
+    const todayTotals = useMemo(() => todaysMeals.reduce((acc, m) => ({
+        calories: acc.calories + (Number(m.calories) || 0),
+        protein: acc.protein + (Number(m.protein) || 0),
+        carbs: acc.carbs + (Number(m.carbs) || 0),
+        fats: acc.fats + (Number(m.fats) || 0),
+    }), { calories: 0, protein: 0, carbs: 0, fats: 0 }), [todaysMeals]);
+
+    // Weekly calories chart from real meals (last 7 days)
+    const weeklyData = useMemo(() => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const last7 = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const dayMeals = allMeals.filter(m => m.created_at?.startsWith(dateStr));
+            const totalCal = dayMeals.reduce((s, m) => s + (Number(m.calories) || 0), 0);
+            last7.push({ day: days[d.getDay()], calories: totalCal });
+        }
+        return last7;
+    }, [allMeals]);
+
+    // Macro pie chart from today's data
+    const macroData = useMemo(() => {
+        const total = todayTotals.protein + todayTotals.carbs + todayTotals.fats;
+        if (total === 0) return [
+            { name: 'Protein', value: 33 },
+            { name: 'Carbs', value: 34 },
+            { name: 'Fats', value: 33 },
+        ];
+        return [
+            { name: 'Protein', value: Math.round((todayTotals.protein / total) * 100) },
+            { name: 'Carbs', value: Math.round((todayTotals.carbs / total) * 100) },
+            { name: 'Fats', value: Math.round((todayTotals.fats / total) * 100) },
+        ];
+    }, [todayTotals]);
+
+    // Activity score based on how close to goals
+    const activityScore = useMemo(() => {
+        if (!goals || todayTotals.calories === 0) return 0;
+        const calRatio = Math.min(1, todayTotals.calories / (goals.calories || 2200));
+        const proRatio = Math.min(1, todayTotals.protein / (goals.protein || 90));
+        return Math.round((calRatio * 50 + proRatio * 50));
+    }, [todayTotals, goals]);
+
+    // AI summary message
+    const aiSummary = useMemo(() => {
+        if (todaysMeals.length === 0) return "No meals logged today yet. Head to the Food Scanner to start tracking your nutrition.";
+        const prot = todayTotals.protein;
+        const cal = todayTotals.calories;
+        const goalCal = goals?.calories || 2200;
+        const goalProt = goals?.protein || 90;
+
+        let msg = "";
+        if (cal < goalCal * 0.7) msg += `You've consumed ${cal} kcal so far, which is under your ${goalCal} kcal target. `;
+        else if (cal > goalCal) msg += `You've exceeded your calorie goal (${cal}/${goalCal} kcal). Consider lighter meals for the rest of the day. `;
+        else msg += `You're on track with ${cal} kcal today. `;
+
+        if (prot < goalProt * 0.6) msg += `Your protein intake (${prot}g) is below target. Add a protein-rich snack like eggs or yogurt.`;
+        else if (prot >= goalProt) msg += `Great protein intake at ${prot}g! You've met your daily target.`;
+        else msg += `Protein is at ${prot}g/${goalProt}g — almost there!`;
+
+        return msg;
+    }, [todaysMeals, todayTotals, goals]);
+
+    if (loading) {
+        return (
+            <div className="min-h-[50vh] flex items-center justify-center">
+                <Loader2 className="text-primary-500 animate-spin" size={32} />
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Dashboard</h1>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard title="Calories Today" value="1,850" unit="kcal" icon={Flame} color="bg-orange-100 text-orange-500 dark:bg-orange-900/30" />
-                <StatCard title="Protein" value="72" unit="g" icon={Dumbbell} color="bg-blue-100 text-blue-500 dark:bg-blue-900/30" />
-                <StatCard title="Water" value="1.8" unit="L" icon={Droplets} color="bg-cyan-100 text-cyan-500 dark:bg-cyan-900/30" />
-                <StatCard title="Activity Score" value="84" unit="/100" icon={Activity} color="bg-primary-100 text-primary-600 dark:bg-primary-900/30" />
+                <StatCard title="Calories Today" value={todayTotals.calories.toLocaleString()} unit="kcal" icon={Flame} color="bg-orange-100 text-orange-500 dark:bg-orange-900/30" />
+                <StatCard title="Protein" value={todayTotals.protein} unit="g" icon={Dumbbell} color="bg-blue-100 text-blue-500 dark:bg-blue-900/30" />
+                <StatCard title="Meals Logged" value={todaysMeals.length} unit="today" icon={Droplets} color="bg-cyan-100 text-cyan-500 dark:bg-cyan-900/30" />
+                <StatCard title="Activity Score" value={activityScore} unit="/100" icon={Activity} color="bg-primary-100 text-primary-600 dark:bg-primary-900/30" />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8 mb-8">
@@ -98,7 +187,7 @@ const Dashboard = () => {
             <div className="bg-gradient-to-br from-dark-800 to-primary-900/50 rounded-3xl p-8 text-white">
                 <h2 className="text-lg font-bold mb-2">AI Health Summary</h2>
                 <p className="text-gray-300 leading-relaxed">
-                    You are on track today. Your protein intake is slightly below target. Consider adding a protein-rich snack in the afternoon. Your hydration has improved 12% compared to last week. Keep it up.
+                    {aiSummary}
                 </p>
             </div>
         </div>

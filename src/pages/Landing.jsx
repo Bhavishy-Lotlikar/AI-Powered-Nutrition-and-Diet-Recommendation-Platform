@@ -127,7 +127,7 @@ const Landing = () => {
                                     className="w-full sm:w-auto max-w-[280px]"
                                 >
                                     <span className="flex items-center gap-2 font-bold tracking-wide">
-                                        Start Your Free Trial
+                                    Start Your Free Trial
                                         <ArrowRight size={18} />
                                     </span>
                                 </StarBorder>
