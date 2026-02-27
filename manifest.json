@@ -1,0 +1,22 @@
+{
+    "name": "NurtiMind",
+    "short_name": "NurtiMind",
+    "description": "AI-powered food recognition and calorie estimation",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F3F4F6",
+    "theme_color": "#16A34A",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
