@@ -11,4 +11,4 @@ export { default as Profile } from './Profile';
 export { default as AIDemo } from './AIDemo';
 export { default as AuthPage } from './AuthPage';
 export { default as NotFound } from './NotFound';
-
+export { default as Pricing } from './Pricing';

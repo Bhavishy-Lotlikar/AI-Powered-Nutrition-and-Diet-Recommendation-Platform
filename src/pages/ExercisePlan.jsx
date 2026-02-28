@@ -1,25 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Dumbbell, Clock, Flame, Target, Loader2, CheckCircle2,
-    Timer, RefreshCw, ChevronDown, ChevronUp
+    Timer, RefreshCw, ChevronDown, ChevronUp, Check
 } from 'lucide-react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import clsx from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { generateExercisePlan, saveExercisePlan, fetchTodaysPlan, fetchRecentPlans } from '../api/exerciseApi';
 import { fetchTodaysMeals } from '../api/mealApi';
 import { fetchProfile } from '../api/profileApi';
 
-const ExerciseCard = ({ exercise, index }) => (
-    <div className="bg-white dark:bg-dark-800 p-5 rounded-2xl border border-gray-100 dark:border-dark-700 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 text-primary-600 font-bold text-sm">
-            {index + 1}
-        </div>
-        <div className="flex-1">
-            <h4 className="font-bold text-gray-900 dark:text-white mb-1">{exercise.name}</h4>
-            <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span className="flex items-center gap-1"><Dumbbell size={12} /> {exercise.sets} sets × {exercise.reps}</span>
-                <span className="flex items-center gap-1"><Timer size={12} /> Rest: {exercise.rest}</span>
+const ExerciseCardAnimated = ({ exercise, index }) => (
+    <div className="w-[300px] sm:w-[350px] md:w-[400px] flex-shrink-0 h-[400px] sm:h-[450px] rounded-3xl relative overflow-hidden bg-gradient-to-br from-dark-800 to-dark-900 border border-dark-700 shadow-2xl flex flex-col group">
+        <div className="absolute inset-0 bg-primary-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+        <div className="p-6 md:p-8 flex-1 flex flex-col relative z-10">
+            <div className="w-14 h-14 rounded-2xl bg-primary-500/20 flex items-center justify-center text-primary-400 font-black text-xl mb-6 shadow-inner ring-1 ring-primary-500/30">
+                0{index + 1}
             </div>
-            {exercise.notes && <p className="text-xs text-gray-400 dark:text-gray-500 italic">{exercise.notes}</p>}
+
+            <h4 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight">{exercise.name}</h4>
+
+            <div className="space-y-3 mt-auto mb-6">
+                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <Dumbbell className="text-primary-400" size={18} />
+                    <span className="text-gray-200 font-bold">{exercise.sets} sets × {exercise.reps}</span>
+                </div>
+                <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10 backdrop-blur-sm">
+                    <Timer className="text-primary-400" size={18} />
+                    <span className="text-gray-200 font-bold">Rest: {exercise.rest}</span>
+                </div>
+            </div>
+
+            {exercise.notes && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-sm italic">
+                    {exercise.notes}
+                </div>
+            )}
         </div>
     </div>
 );
@@ -34,6 +51,21 @@ const ExercisePlan = () => {
     const [error, setError] = useState(null);
     const [recentPlans, setRecentPlans] = useState([]);
     const [expandedPast, setExpandedPast] = useState(null);
+
+    // Horizontal Scroll Ref
+    const scrollContainerRef = useRef(null);
+    const { scrollYProgress } = useScroll({
+        target: scrollContainerRef,
+        offset: ["start start", "end end"],
+    });
+
+    // We need viewport width to calculate horizontal distance
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1000);
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -134,13 +166,25 @@ const ExercisePlan = () => {
             )}
 
             {/* Generating State */}
-            {generating && (
-                <div className="bg-primary-50/50 dark:bg-primary-900/10 rounded-3xl p-12 text-center border border-primary-100 dark:border-primary-900/30 mb-8">
-                    <Loader2 className="text-primary-500 animate-spin mx-auto mb-4" size={40} />
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating Your Workout...</h3>
-                    <p className="text-gray-500 dark:text-gray-400">NutriMind AI is building a personalized plan based on your nutrition and goals.</p>
-                </div>
-            )}
+            <AnimatePresence>
+                {generating && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                        className="bg-primary-50/50 dark:bg-primary-900/10 rounded-3xl p-12 text-center border border-primary-100 dark:border-primary-900/30 mb-8 max-w-lg mx-auto overflow-hidden relative"
+                    >
+                        <motion.div
+                            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary-500/10 to-transparent z-0"
+                            animate={{ translateX: ['-100%', '200%'] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        />
+                        <Loader2 className="text-primary-500 animate-spin mx-auto mb-4 relative z-10" size={40} />
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 relative z-10">Coding Your Regimen...</h3>
+                        <p className="text-gray-500 dark:text-gray-400 relative z-10">A personalized split is being calculated for maximum hypertrophy based on today's macros.</p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Plan Display */}
             {plan && (
@@ -168,12 +212,25 @@ const ExercisePlan = () => {
                         </div>
                     )}
 
-                    {/* Exercises */}
+                    {/* Horizontal Scroll Gallery for Exercises */}
                     {plan.exercises?.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-bold tracking-widest text-gray-400 uppercase mb-4">Exercises</h3>
-                            <div className="space-y-3">
-                                {plan.exercises.map((ex, i) => <ExerciseCard key={i} exercise={ex} index={i} />)}
+                        <div className="py-12 -mx-4 sm:-mx-6 lg:-mx-8">
+                            {/* We calculate scroll container height. ~100vh per card for nice scrolling */}
+                            <div ref={scrollContainerRef} style={{ height: `${plan.exercises.length * 70}vh`, position: 'relative' }}>
+                                {/* Sticky container locks to viewport */}
+                                <div className="sticky top-0 h-screen w-full flex items-center overflow-hidden">
+
+                                    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                        <div className="mb-8 pl-2">
+                                            <h3 className="text-3xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white uppercase">The Protocol</h3>
+                                            <p className="text-gray-500 dark:text-gray-400 font-bold tracking-widest uppercase text-sm mt-2">Scroll to execute</p>
+                                        </div>
+
+                                        {/* Transform horizontal based on scrollYProgress. */}
+                                        <ExerciseGallery scrollYProgress={scrollYProgress} exercises={plan.exercises} windowWidth={windowWidth} />
+                                    </div>
+
+                                </div>
                             </div>
                         </div>
                     )}
@@ -196,55 +253,129 @@ const ExercisePlan = () => {
                         </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-4">
-                        <button onClick={() => { setPlan(null); setSaved(false); setError(null); }} className="flex-1 py-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2">
-                            <RefreshCw size={18} /> Regenerate
+                    {/* Action Buttons - Slide in from right */}
+                    <motion.div
+                        initial={{ opacity: 0, x: 100 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true, margin: "0px 0px -100px 0px" }}
+                        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                        className="flex flex-col sm:flex-row gap-4 mt-12 py-8 border-t border-gray-200 dark:border-dark-700 max-w-2xl mx-auto"
+                    >
+                        <button onClick={() => { setPlan(null); setSaved(false); setError(null); }} className="flex-1 py-5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2">
+                            <RefreshCw size={20} /> Regenerate Protocol
                         </button>
                         {!saved ? (
-                            <button onClick={handleSave} disabled={saving} className="flex-1 py-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-primary-500/25 flex items-center justify-center gap-2">
-                                {saving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : 'Save Plan'}
+                            <button onClick={handleSave} disabled={saving} className="flex-1 py-5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 disabled:opacity-50 text-white font-bold rounded-2xl transition-colors shadow-xl shadow-primary-500/25 flex items-center justify-center gap-2 text-lg">
+                                {saving ? <><Loader2 size={20} className="animate-spin" /> Committing...</> : 'Save & Log Execution'}
                             </button>
                         ) : (
-                            <div className="flex-1 py-4 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2">
-                                <CheckCircle2 size={18} /> Plan Saved
+                            <div className="flex-1 py-5 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-lg">
+                                <Check size={24} strokeWidth={3} /> Protocol Saved
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
             )}
 
-            {/* Recent Plans */}
-            {recentPlans.length > 0 && (
-                <div className="mt-12">
-                    <h3 className="text-sm font-bold tracking-widest text-gray-400 uppercase mb-4">Saved Workout Logs</h3>
-                    <div className="space-y-3">
-                        {recentPlans.map((rp) => (
-                            <div key={rp.id} className="bg-white dark:bg-dark-800 rounded-2xl border border-gray-100 dark:border-dark-700 overflow-hidden">
-                                <button
-                                    onClick={() => setExpandedPast(expandedPast === rp.id ? null : rp.id)}
-                                    className="w-full p-4 flex items-center justify-between text-left"
+            {/* Recent Plans - Slides in when saved */}
+            <AnimatePresence>
+                {recentPlans.length > 0 && (plan ? saved : true) && (
+                    <motion.div
+                        initial={{ opacity: 0, x: 100 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 100 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.1 }}
+                        className="mt-12 max-w-2xl mx-auto"
+                    >
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-gray-200 dark:to-dark-700"></div>
+                            <h3 className="text-sm font-bold tracking-widest text-gray-400 uppercase">Workout Logs</h3>
+                            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gray-200 dark:to-dark-700"></div>
+                        </div>
+
+                        <div className="space-y-4">
+                            {recentPlans.map((rp, index) => (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    key={rp.id}
+                                    className="bg-white dark:bg-dark-800 rounded-3xl border border-gray-100 dark:border-dark-700 overflow-hidden shadow-sm"
                                 >
-                                    <div>
-                                        <p className="font-bold text-gray-900 dark:text-white">{rp.focus || 'Workout'}</p>
-                                        <p className="text-xs text-gray-500">{new Date(rp.date).toLocaleDateString()} — {rp.duration}</p>
-                                    </div>
-                                    {expandedPast === rp.id ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-                                </button>
-                                {expandedPast === rp.id && rp.full_response && (
-                                    <div className="px-4 pb-4 border-t border-gray-100 dark:border-dark-700 pt-3">
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{rp.summary}</p>
-                                        {rp.exercises?.map((ex, i) => (
-                                            <p key={i} className="text-xs text-gray-500 mb-1">{i + 1}. {ex.name} — {ex.sets}×{ex.reps}</p>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                                    <button
+                                        onClick={() => setExpandedPast(expandedPast === rp.id ? null : rp.id)}
+                                        className="w-full p-5 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-dark-700/50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="bg-primary-50 dark:bg-primary-900/20 p-3 rounded-xl text-primary-600 dark:text-primary-400">
+                                                <Dumbbell size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 dark:text-white text-lg">{rp.focus || 'Full Body Protocol'}</p>
+                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{new Date(rp.date).toLocaleDateString()} • {rp.duration}</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-100 dark:bg-dark-700 p-2 rounded-full">
+                                            {expandedPast === rp.id ? <ChevronUp size={18} className="text-gray-900 dark:text-white" /> : <ChevronDown size={18} className="text-gray-900 dark:text-white" />}
+                                        </div>
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {expandedPast === rp.id && rp.full_response && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="px-5 pb-5 border-t border-gray-100 dark:border-dark-700 pt-4"
+                                            >
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">{rp.summary}</p>
+                                                <div className="bg-gray-50 dark:bg-dark-900/50 rounded-2xl p-4 space-y-3">
+                                                    {rp.exercises?.map((ex, i) => (
+                                                        <div key={i} className="flex items-start gap-3 border-b border-gray-200 dark:border-dark-700 last:border-b-0 pb-3 last:pb-0">
+                                                            <span className="text-xs font-bold text-primary-500 mt-1">0{i + 1}</span>
+                                                            <div>
+                                                                <p className="font-bold text-gray-900 dark:text-white text-sm">{ex.name}</p>
+                                                                <p className="text-xs text-gray-500">{ex.sets} sets × {ex.reps}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
+    );
+};
+
+// Component helper for the horizontal transform
+const ExerciseGallery = ({ scrollYProgress, exercises, windowWidth }) => {
+    // Gap and card width assumptions
+    // Card width depends on viewport but roughly 400px + 24px gap = 424px.
+    const isMobile = windowWidth < 640;
+    const cardWidth = isMobile ? 300 : windowWidth < 768 ? 350 : 400;
+    const gap = 24;
+
+    // Total scrollable width.
+    const totalDistance = (exercises.length - 1) * (cardWidth + gap);
+
+    // Map strictly 0 to 1 of scrollY to 0 to -totalDistance horizontally
+    const x = useTransform(scrollYProgress, [0, 1], [0, -totalDistance]);
+
+    return (
+        <motion.div
+            className="flex gap-6 pl-2 pr-[50vw]" // Extra padding on right so last card isn't edge-locked
+            style={{ x }}
+        >
+            {exercises.map((ex, i) => (
+                <ExerciseCardAnimated key={i} exercise={ex} index={i} />
+            ))}
+        </motion.div>
     );
 };
 

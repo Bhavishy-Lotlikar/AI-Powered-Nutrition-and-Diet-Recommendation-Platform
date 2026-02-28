@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BrainCircuit, Mail, Lock, AlertCircle } from 'lucide-react';
+import { useTransitionNavigate } from '../components/layout/Layout';
 
 const AuthPage = ({ initialMode = 'login' }) => {
     const [isLogin, setIsLogin] = useState(initialMode === 'login');
@@ -11,7 +12,7 @@ const AuthPage = ({ initialMode = 'login' }) => {
     const [error, setError] = useState(null);
 
     const { signIn, signUp } = useAuth();
-    const navigate = useNavigate();
+    const navigateWithTransition = useTransitionNavigate();
     const location = useLocation();
 
     // Redirect to where they were trying to go, or dashboard
@@ -26,7 +27,7 @@ const AuthPage = ({ initialMode = 'login' }) => {
             if (isLogin) {
                 const { error: signInError } = await signIn(email, password);
                 if (signInError) throw signInError;
-                navigate(from, { replace: true });
+                navigateWithTransition(from);
             } else {
                 const { error: signUpError } = await signUp(email, password);
                 if (signUpError) throw signUpError;

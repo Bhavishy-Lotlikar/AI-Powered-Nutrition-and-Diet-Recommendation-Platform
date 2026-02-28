@@ -270,13 +270,16 @@ Return ONLY valid JSON (no markdown, no code fences):
   "recommended": [
     { "name": "Meal name", "desc": "Why this meal helps fill their gaps (1 sentence)", "calories": 300, "protein": 25, "carbs": 30, "fat": 8, "tags": ["High Protein", "Quick Prep"] }
   ],
+  "budget_friendly": [
+    { "name": "Budget meal name", "desc": "Why this budget meal helps fill their gaps (1 sentence)", "calories": 300, "protein": 25, "carbs": 30, "fat": 8, "tags": ["Budget", "High Protein"] }
+  ],
   "avoid": [
     { "name": "Food to avoid", "reason": "Why they should avoid this today (1 sentence)" }
   ],
   "tips": ["1 actionable nutrition tip for them"]
 }
 
-Give 4-5 recommended meals and 3 foods to avoid. Be specific with Indian and international food options. Tailor recommendations to fill their nutritional gaps.`;
+Give 3 recommended meals, 3 budget-friendly meals, and 3 foods to avoid. Be specific with Indian and international food options. Tailor recommendations to fill their nutritional gaps.`;
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -288,7 +291,7 @@ Give 4-5 recommended meals and 3 foods to avoid. Be specific with Indian and int
             },
             body: JSON.stringify({
                 model: 'google/gemini-2.5-flash',
-                max_tokens: 1000,
+                max_tokens: 2500,
                 messages: [{ role: 'user', content: prompt }]
             })
         });

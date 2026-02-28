@@ -1,5 +1,7 @@
-import React from 'react';
-import { Camera, ScanLine, BellRing, Rocket, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Camera, ScanLine, BellRing, Rocket, ArrowRight, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTransitionNavigate } from '../components/layout/Layout';
 import RippleGrid from '../components/common/RippleGrid';
 import GlareHover from '../components/common/GlareHover';
 import StarBorder from '../components/common/StarBorder';
@@ -29,11 +31,33 @@ const FeatureCard = ({ icon: Icon, title, description }) => (
 );
 
 const Landing = () => {
+    const navigateWithTransition = useTransitionNavigate();
+    const [showNotification, setShowNotification] = useState(false);
+
+    const handleFreeTrial = () => {
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+    };
+
     return (
         <div className="bg-white dark:bg-dark-900 transition-colors">
 
+            {/* Notification Toast */}
+            <AnimatePresence>
+                {showNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                        className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-primary-500 text-white px-6 py-3 rounded-full shadow-lg font-bold tracking-wide flex items-center gap-2"
+                    >
+                        <Star size={18} className="fill-white" /> Enjoy your free trial!
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Scroll-based Hero */}
-            <ScrollAnimation />
+            <ScrollAnimation onNavigatePricing={() => navigateWithTransition('/pricing')} />
 
             {/* Why NutriMind Section */}
             <section className="py-32 relative">
@@ -136,10 +160,10 @@ const Landing = () => {
                                     as="button"
                                     color="#22c55e"
                                     speed="4s"
-                                    className="w-[240px] h-[56px] flex items-center justify-center"
+                                    className="w-[240px] h-[56px] flex items-center justify-center cursor-pointer"
+                                    onClick={handleFreeTrial}
                                 >
-                                    <span className="flex items-center gap-2 font-bold tracking-wide text-sm">
-
+                                    <span className="flex items-center gap-2 font-bold tracking-wide text-sm pointer-events-none">
                                         Free Trial
                                         <ArrowRight size={18} />
                                     </span>
@@ -154,8 +178,10 @@ const Landing = () => {
                                     glareSize={250}
                                     transitionDuration={600}
                                     style={{ border: '1px solid rgba(255,255,255,0.15)' }}
+                                    className="cursor-pointer"
+                                    onClick={() => navigateWithTransition('/pricing')}
                                 >
-                                    <button className="w-full h-11 flex flex-col sm:flex-row gap-4 justify-center items-center">
+                                    <button className="w-full h-11 flex flex-col sm:flex-row gap-4 justify-center items-center px-8 font-bold text-gray-900 dark:text-white pointer-events-none">
                                         View Pricing
                                     </button>
                                 </GlareHover>
