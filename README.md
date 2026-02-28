@@ -19,18 +19,18 @@ The system combines computer vision, predictive modeling, and health analytics t
 * Health prediction using XGBoost
 * Weekly health trend visualization (6 months)
 * Ideal vs current diet comparison graph
-* Modular backend architecture (FastAPI)
+* Modular backend architecture (Node.js & Supabase)
 * React-based frontend integration
 
 ---
 
 ## Tech Stack
 
-* Python (FastAPI backend)
+* Node.js (Backend)
 * React (Frontend)
 * Gemini API (Vision + AI inference)
 * XGBoost (Health prediction model)
-* MongoDB / PostgreSQL (planned storage layer)
+* PostgreSQL (planned storage layer)
 * Matplotlib (Graph visualization)
 
 ---
