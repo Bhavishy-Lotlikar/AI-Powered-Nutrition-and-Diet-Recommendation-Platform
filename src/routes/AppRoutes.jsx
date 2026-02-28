@@ -16,6 +16,7 @@ import {
     Profile,
     AIDemo,
     AuthPage,
+    Pricing,
     NotFound
 } from '../pages';
 
@@ -44,6 +45,7 @@ const AppRoutes = () => {
 
                 {/* Demo Route (Public) */}
                 <Route path="ai-demo" element={<AIDemo />} />
+                <Route path="pricing" element={<Pricing />} />
 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>

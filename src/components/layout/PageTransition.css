@@ -1,0 +1,24 @@
+.transition-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.transition-block {
+    background: #0b0f19;
+    /* Much darker Tailwind dark-900 equivalent */
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    /* Subtle grid line */
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    transform: scale(1.05);
+    /* Slight overlap to prevent gap glitches */
+}
+
+.transition-block.show {
+    opacity: 1;
+}

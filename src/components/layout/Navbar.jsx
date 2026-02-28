@@ -4,10 +4,12 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Menu, X, Sun, Moon, User, BrainCircuit } from 'lucide-react';
 import clsx from 'clsx';
+import { useTransitionNavigate } from './Layout';
 
 const Navbar = () => {
     const { theme, toggleTheme } = useTheme();
     const { user, signOut } = useAuth();
+    const navigateWithTransition = useTransitionNavigate();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -60,7 +62,15 @@ const Navbar = () => {
                     {/* Desktop Navigation */}
                     <div className="hidden lg:flex items-center space-x-1">
                         {navLinks.map((link) => (
-                            <NavLink key={link.name} to={link.path} className={getLinkClasses}>
+                            <NavLink
+                                key={link.name}
+                                to={link.path}
+                                className={getLinkClasses}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    navigateWithTransition(link.path);
+                                }}
+                            >
                                 {link.name}
                             </NavLink>
                         ))}
@@ -116,7 +126,11 @@ const Navbar = () => {
                                     key={link.name}
                                     to={link.path}
                                     className={getLinkClasses}
-                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setIsMobileMenuOpen(false);
+                                        navigateWithTransition(link.path);
+                                    }}
                                 >
                                     {link.name}
                                 </NavLink>

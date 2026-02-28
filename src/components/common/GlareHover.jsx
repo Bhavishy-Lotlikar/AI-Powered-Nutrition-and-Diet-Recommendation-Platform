@@ -14,7 +14,8 @@ const GlareHover = ({
     transitionDuration = 800,
     playOnce = false,
     className = '',
-    style = {}
+    style = {},
+    onClick
 }) => {
     const hex = glareColor.replace('#', '');
     let rgba = glareColor;
@@ -68,6 +69,7 @@ const GlareHover = ({
             style={{ width, height, background, borderRadius, borderColor, ...style }}
             onMouseEnter={animateIn}
             onMouseLeave={animateOut}
+            onClick={onClick}
         >
             <div ref={overlayRef} style={overlayStyle} />
             <div style={{ position: 'relative', zIndex: 2, width: '100%', height: '100%' }}>

@@ -5,19 +5,38 @@ import {
     Camera, ScanBarcode, X
 } from 'lucide-react';
 import clsx from 'clsx';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { analyzeFood, saveMeal, fetchTodaysMeals } from '../api/mealApi';
 import { updateDailySummary } from '../api/summaryApi';
 
 const NutritionFactRow = ({ label, value, unit, bold = false, indent = false }) => (
     <div className={clsx(
-        "flex justify-between py-1.5 border-b border-gray-100 dark:border-dark-700 last:border-b-0",
+        "flex justify-between py-2 border-b border-gray-100 dark:border-dark-700 last:border-b-0",
         indent && "pl-4"
     )}>
         <span className={clsx("text-sm text-gray-600 dark:text-gray-400", bold && "font-bold text-gray-900 dark:text-white")}>{label}</span>
         <span className={clsx("text-sm", bold ? "font-bold text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300")}>{value}{unit}</span>
     </div>
 );
+
+// Animated version of the row for staggered lists
+const AnimatedNutritionRow = ({ label, value, unit, bold = false, indent = false }) => {
+    const itemVariants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    };
+
+    return (
+        <motion.div variants={itemVariants} className={clsx(
+            "flex justify-between py-2 border-b border-gray-100 dark:border-dark-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-dark-700/50 rounded-lg px-2 -mx-2 transition-colors",
+            indent && "pl-6"
+        )}>
+            <span className={clsx("text-sm text-gray-600 dark:text-gray-400", bold && "font-bold text-gray-900 dark:text-white")}>{label}</span>
+            <span className={clsx("text-sm", bold ? "font-bold text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300")}>{value}{unit}</span>
+        </motion.div>
+    );
+};
 
 const HealthBadge = ({ score }) => {
     const isHealthy = score >= 60;
@@ -34,14 +53,30 @@ const HealthBadge = ({ score }) => {
     );
 };
 
-const MacroCard = ({ label, value, unit, icon: Icon, color, bgColor }) => (
-    <div className="bg-white dark:bg-dark-800 p-4 rounded-2xl border border-gray-100 dark:border-dark-700 flex flex-col items-center gap-1">
-        <div className={clsx("p-2 rounded-xl mb-1", bgColor)}>
+const MacroCard = ({ label, value, unit, icon: Icon, color, bgColor, index = 0 }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: index * 0.1, ease: 'easeOut' }}
+        whileHover={{ scale: 1.02 }}
+        className="bg-white dark:bg-dark-800 p-4 rounded-2xl border border-gray-100 dark:border-dark-700 flex flex-col items-center gap-1 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
+    >
+        {/* Subtle background glow on hover */}
+        <div className={clsx("absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none", bgColor)} />
+
+        <div className={clsx("p-2 rounded-xl mb-1 transition-transform group-hover:scale-110 duration-300 relative z-10", bgColor)}>
             <Icon size={16} className={color} />
         </div>
-        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
-        <span className="text-2xl font-bold text-gray-900 dark:text-white">{value}<span className="text-sm font-normal text-gray-400">{unit}</span></span>
-    </div>
+        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider relative z-10">{label}</span>
+        <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
+            className="text-2xl font-bold text-gray-900 dark:text-white relative z-10"
+        >
+            {value}<span className="text-sm font-normal text-gray-400">{unit}</span>
+        </motion.span>
+    </motion.div>
 );
 
 const FoodDetection = () => {
@@ -464,141 +499,257 @@ const FoodDetection = () => {
             )}
 
             {/* Loading State */}
-            {isAnalyzing && (
-                <div className="bg-primary-50/50 dark:bg-primary-900/10 rounded-[2.5rem] p-12 text-center border border-primary-100 dark:border-primary-900/30">
-                    <div className="bg-primary-100 dark:bg-primary-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Loader2 className="text-primary-500 animate-spin" size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Analyzing Your Food...</h3>
-                    <p className="text-gray-500 dark:text-gray-400">NutriMind AI is identifying nutrients and generating recommendations.</p>
-                    {previewImage && (
-                        <div className="mt-6 w-32 h-32 rounded-2xl overflow-hidden mx-auto border-2 border-primary-200 dark:border-primary-800">
-                            <img src={previewImage} alt="Uploaded" className="w-full h-full object-cover" />
-                        </div>
-                    )}
-                </div>
-            )}
+            <AnimatePresence>
+                {isAnalyzing && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                        className="bg-white dark:bg-dark-800 rounded-[2rem] p-10 text-center border border-gray-100 dark:border-dark-700 shadow-xl max-w-lg mx-auto relative overflow-hidden"
+                    >
+                        {/* Shimmer effect */}
+                        <motion.div
+                            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary-500/5 to-transparent z-0"
+                            animate={{ translateX: ['-100%', '200%'] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        />
 
-            {/* Analysis Results */}
-            {mealData && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-                    {/* Header: Food Name + Health Badge */}
-                    <div className="bg-white dark:bg-dark-800 rounded-3xl p-6 border border-gray-100 dark:border-dark-700 shadow-sm">
-                        <div className="flex flex-col sm:flex-row gap-6">
-                            {previewImage && (
-                                <div className="w-full sm:w-40 h-40 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-200 dark:border-dark-600">
-                                    <img src={previewImage} alt={mealData.foodName} className="w-full h-full object-cover" />
-                                </div>
+                        <div className="relative z-10">
+                            {previewImage ? (
+                                <motion.div
+                                    initial={{ scale: 0.8 }} animate={{ scale: 1 }}
+                                    className="w-24 h-24 rounded-2xl overflow-hidden mx-auto mb-6 border-4 border-primary-100 dark:border-primary-900 shadow-inner relative"
+                                >
+                                    <img src={previewImage} alt="Scanning" className="w-full h-full object-cover opacity-70" />
+                                    {/* Scanning line over image */}
+                                    <motion.div
+                                        className="absolute left-0 right-0 h-1 bg-primary-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]"
+                                        animate={{ top: ['0%', '100%', '0%'] }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                    />
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                    className="bg-primary-50 dark:bg-primary-900/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-primary-100 dark:border-primary-800"
+                                >
+                                    <ScanSearch className="text-primary-500" size={32} />
+                                </motion.div>
                             )}
-                            <div className="flex-1">
-                                <div className="flex items-start justify-between mb-3">
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{mealData.foodName}</h2>
+
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Analyzing Nutrition...</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">AI is processing pixels to extract macronutrients and generate health insights.</p>
+
+                            {/* Animated Progress Bar */}
+                            <div className="h-2 w-full bg-gray-100 dark:bg-dark-700 rounded-full overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-primary-500 rounded-full"
+                                    initial={{ width: "0%" }}
+                                    animate={{ width: "95%" }}
+                                    transition={{ duration: 15, ease: "easeOut" }} // Fake progress that stalls at 95% until done
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Analysis Results - Advanced 2-Column Sticky Layout */}
+            {mealData && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                        {/* LEFT COLUMN: Sticky Overview & Actions */}
+                        <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                className="bg-white dark:bg-dark-800 rounded-3xl p-6 border border-gray-100 dark:border-dark-700 shadow-xl shadow-gray-200/50 dark:shadow-none"
+                            >
+                                {previewImage && (
+                                    <div className="w-full aspect-square rounded-2xl overflow-hidden mb-6 border-2 border-primary-50 dark:border-dark-600 shadow-inner group">
+                                        <motion.img
+                                            whileHover={{ scale: 1.05 }}
+                                            transition={{ duration: 0.4 }}
+                                            src={previewImage}
+                                            alt={mealData.foodName}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                )}
+
+                                <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">{mealData.foodName}</h2>
+                                <div className="mb-6">
                                     <HealthBadge score={mealData.healthScore} />
                                 </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Default Portion: {mealData.portionSize}</p>
 
-                                {/* Portion Calculator */}
-                                <div className="flex items-center gap-2 mb-4 bg-gray-50 dark:bg-dark-700 rounded-xl px-3 py-2">
-                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">My intake:</span>
-                                    <input
-                                        type="number"
-                                        value={customPortion}
-                                        onChange={(e) => setCustomPortion(e.target.value)}
-                                        placeholder={String(originalPortion)}
-                                        className="w-20 px-2 py-1 bg-white dark:bg-dark-600 border border-gray-200 dark:border-dark-500 rounded-lg text-sm text-center text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    />
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">grams</span>
+                                <div className="bg-gray-50 dark:bg-dark-700/50 rounded-2xl p-4 mb-6">
+                                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Adjust Portion</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            value={customPortion}
+                                            onChange={(e) => setCustomPortion(e.target.value)}
+                                            placeholder={String(originalPortion)}
+                                            className="w-full px-4 py-2 bg-white dark:bg-dark-600 border border-gray-200 dark:border-dark-500 rounded-xl text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
+                                        />
+                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">grams</span>
+                                    </div>
                                     {customPortion && portionRatio !== 1 && (
-                                        <span className="text-xs font-bold text-primary-500 ml-auto">
-                                            {Math.round(portionRatio * 100)}% of original
-                                        </span>
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            className="mt-2 text-xs font-bold text-primary-500 bg-primary-50 dark:bg-primary-500/10 py-1.5 px-3 rounded-lg inline-block"
+                                        >
+                                            Scaling: {Math.round(portionRatio * 100)}%
+                                        </motion.div>
                                     )}
                                 </div>
 
-                                {/* Macro Summary Cards */}
-                                <div className="grid grid-cols-4 gap-2">
-                                    <MacroCard label="Calories" value={scale(mealData.estimatedCalories)} unit="kcal" icon={Flame} color="text-orange-500" bgColor="bg-orange-100 dark:bg-orange-900/30" />
-                                    <MacroCard label="Protein" value={scale(mealData.protein)} unit="g" icon={Beef} color="text-blue-500" bgColor="bg-blue-100 dark:bg-blue-900/30" />
-                                    <MacroCard label="Carbs" value={scale(mealData.carbs)} unit="g" icon={Wheat} color="text-amber-500" bgColor="bg-amber-100 dark:bg-amber-900/30" />
-                                    <MacroCard label="Fat" value={scale(mealData.fat)} unit="g" icon={Droplets} color="text-primary-500" bgColor="bg-primary-100 dark:bg-primary-900/30" />
+                                {/* Action Buttons Moved to Sticky Column */}
+                                <div className="flex flex-col gap-3">
+                                    {!saved ? (
+                                        <motion.button
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={handleLogMeal}
+                                            disabled={isSaving}
+                                            className="w-full py-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-bold rounded-2xl transition-all shadow-lg shadow-primary-500/25 flex items-center justify-center gap-2"
+                                        >
+                                            {isSaving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : 'Log This Meal'}
+                                        </motion.button>
+                                    ) : (
+                                        <motion.div
+                                            initial={{ scale: 0.9, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="w-full py-4 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2"
+                                        >
+                                            <CheckCircle2 size={18} /> Meal Logged
+                                        </motion.div>
+                                    )}
+                                    <button
+                                        onClick={handleReset}
+                                        className="w-full py-3 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors"
+                                    >
+                                        Scan Another
+                                    </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
-                    </div>
 
-                    {/* Full Nutrition Facts */}
-                    {mealData.nutritionFacts && (
-                        <div className="bg-white dark:bg-dark-800 rounded-3xl p-6 border border-gray-100 dark:border-dark-700 shadow-sm">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 pb-3 border-b-4 border-gray-900 dark:border-white">Nutrition Facts</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Serving Size: {mealData.nutritionFacts.servingSize}</p>
-                            <div className="border-t-8 border-gray-900 dark:border-white pt-2">
-                                <NutritionFactRow label="Calories" value={scale(mealData.estimatedCalories)} unit="" bold />
-                                <div className="border-t-4 border-gray-900 dark:border-white mt-1 pt-1">
-                                    <NutritionFactRow label="Total Fat" value={scale(mealData.nutritionFacts.totalFat)} unit="g" bold />
-                                    <NutritionFactRow label="Saturated Fat" value={scale(mealData.nutritionFacts.saturatedFat)} unit="g" indent />
-                                    <NutritionFactRow label="Trans Fat" value={scale(mealData.nutritionFacts.transFat)} unit="g" indent />
-                                    <NutritionFactRow label="Cholesterol" value={scale(mealData.nutritionFacts.cholesterol)} unit="mg" bold />
-                                    <NutritionFactRow label="Sodium" value={scale(mealData.nutritionFacts.sodium)} unit="mg" bold />
-                                    <NutritionFactRow label="Total Carbohydrate" value={scale(mealData.nutritionFacts.totalCarbs)} unit="g" bold />
-                                    <NutritionFactRow label="Dietary Fiber" value={scale(mealData.nutritionFacts.dietaryFiber)} unit="g" indent />
-                                    <NutritionFactRow label="Total Sugars" value={scale(mealData.nutritionFacts.totalSugars)} unit="g" indent />
-                                    <NutritionFactRow label="Added Sugars" value={scale(mealData.nutritionFacts.addedSugars)} unit="g" indent />
-                                    <NutritionFactRow label="Protein" value={scale(mealData.nutritionFacts.protein)} unit="g" bold />
-                                </div>
-                                <div className="border-t-8 border-gray-900 dark:border-white mt-1 pt-2">
-                                    <NutritionFactRow label="Vitamin D" value={scale(mealData.nutritionFacts.vitaminD)} unit="mcg" />
-                                    <NutritionFactRow label="Calcium" value={scale(mealData.nutritionFacts.calcium)} unit="mg" />
-                                    <NutritionFactRow label="Iron" value={scale(mealData.nutritionFacts.iron)} unit="mg" />
-                                    <NutritionFactRow label="Potassium" value={scale(mealData.nutritionFacts.potassium)} unit="mg" />
-                                </div>
+                        {/* RIGHT COLUMN: Scrolling Details */}
+                        <div className="lg:col-span-8 space-y-6">
+
+                            {/* Macro Summary Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <MacroCard label="Calories" value={scale(mealData.estimatedCalories)} unit="kcal" icon={Flame} color="text-orange-500" bgColor="bg-orange-100 dark:bg-orange-900/30" index={0} />
+                                <MacroCard label="Protein" value={scale(mealData.protein)} unit="g" icon={Beef} color="text-blue-500" bgColor="bg-blue-100 dark:bg-blue-900/30" index={1} />
+                                <MacroCard label="Carbs" value={scale(mealData.carbs)} unit="g" icon={Wheat} color="text-amber-500" bgColor="bg-amber-100 dark:bg-amber-900/30" index={2} />
+                                <MacroCard label="Fat" value={scale(mealData.fat)} unit="g" icon={Droplets} color="text-primary-500" bgColor="bg-primary-100 dark:bg-primary-900/30" index={3} />
                             </div>
-                        </div>
-                    )}
 
-                    {/* AI Recommendation */}
-                    <div className="bg-gradient-to-br from-dark-800 to-primary-900/40 rounded-3xl p-6 text-white">
-                        <h3 className="text-lg font-bold mb-3">NutriMind Recommendation</h3>
-                        <p className="text-gray-300 leading-relaxed mb-4">{mealData.recommendation}</p>
-                        {mealData.warnings?.length > 0 && (
-                            <div className="space-y-2 mt-4 pt-4 border-t border-white/10">
-                                <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Warnings</p>
-                                {mealData.warnings.map((w, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-sm text-amber-300">
-                                        <AlertTriangle size={14} /> {w}
+                            {/* Full Nutrition Facts with Staggered Rows */}
+                            {mealData.nutritionFacts && (
+                                <motion.div
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={{
+                                        visible: { transition: { staggerChildren: 0.08 } },
+                                        hidden: {}
+                                    }}
+                                    className="bg-white dark:bg-dark-800 rounded-3xl p-8 border border-gray-100 dark:border-dark-700 shadow-sm"
+                                >
+                                    <motion.h3 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }} className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                                        Nutrition Facts Panel
+                                        <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-dark-600 to-transparent ml-4"></div>
+                                    </motion.h3>
+
+                                    <div className="border-t-4 border-gray-900 dark:border-white pt-2">
+                                        <AnimatedNutritionRow label="Calories" value={scale(mealData.estimatedCalories)} unit="" bold />
+                                        <div className="border-t-2 border-gray-900 dark:border-white mt-1 pt-1">
+                                            <AnimatedNutritionRow label="Total Fat" value={scale(mealData.nutritionFacts.totalFat)} unit="g" bold />
+                                            <AnimatedNutritionRow label="Saturated Fat" value={scale(mealData.nutritionFacts.saturatedFat)} unit="g" indent />
+                                            <AnimatedNutritionRow label="Trans Fat" value={scale(mealData.nutritionFacts.transFat)} unit="g" indent />
+                                            <AnimatedNutritionRow label="Cholesterol" value={scale(mealData.nutritionFacts.cholesterol)} unit="mg" bold />
+                                            <AnimatedNutritionRow label="Sodium" value={scale(mealData.nutritionFacts.sodium)} unit="mg" bold />
+                                            <AnimatedNutritionRow label="Total Carbohydrate" value={scale(mealData.nutritionFacts.totalCarbs)} unit="g" bold />
+                                            <AnimatedNutritionRow label="Dietary Fiber" value={scale(mealData.nutritionFacts.dietaryFiber)} unit="g" indent />
+                                            <AnimatedNutritionRow label="Total Sugars" value={scale(mealData.nutritionFacts.totalSugars)} unit="g" indent />
+                                            <AnimatedNutritionRow label="Added Sugars" value={scale(mealData.nutritionFacts.addedSugars)} unit="g" indent />
+                                            <AnimatedNutritionRow label="Protein" value={scale(mealData.nutritionFacts.protein)} unit="g" bold />
+                                        </div>
+                                        <div className="border-t-4 border-gray-900 dark:border-white mt-1 pt-2">
+                                            <AnimatedNutritionRow label="Vitamin D" value={scale(mealData.nutritionFacts.vitaminD)} unit="mcg" />
+                                            <AnimatedNutritionRow label="Calcium" value={scale(mealData.nutritionFacts.calcium)} unit="mg" />
+                                            <AnimatedNutritionRow label="Iron" value={scale(mealData.nutritionFacts.iron)} unit="mg" />
+                                            <AnimatedNutritionRow label="Potassium" value={scale(mealData.nutritionFacts.potassium)} unit="mg" />
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                </motion.div>
+                            )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-4">
-                        <button
-                            onClick={handleReset}
-                            className="flex-1 py-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors"
-                        >
-                            Scan Another
-                        </button>
-                        {!saved ? (
-                            <button
-                                onClick={handleLogMeal}
-                                disabled={isSaving}
-                                className="flex-1 py-4 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-primary-500/25 flex items-center justify-center gap-2"
+                            {/* AI Recommendation - Pulsing Edge */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                transition={{ duration: 0.7, type: "spring" }}
+                                className="relative rounded-3xl bg-gradient-to-br from-dark-800 to-primary-900/40 p-1 md:p-8 overflow-hidden group"
                             >
-                                {isSaving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : 'Log This Meal'}
-                            </button>
-                        ) : (
-                            <div className="flex-1 py-4 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2">
-                                <CheckCircle2 size={18} /> Meal Logged
-                            </div>
-                        )}
+                                {/* Animated scanning beam in background */}
+                                <motion.div
+                                    animate={{
+                                        rotate: [0, 360],
+                                    }}
+                                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                                    className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0deg,rgba(34,197,94,0.1)_180deg,transparent_360deg)] pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity"
+                                />
+
+                                <div className="relative z-10 text-white p-6 md:p-0">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="bg-primary-500/20 p-2 rounded-xl backdrop-blur-md">
+                                            <ShieldCheck className="text-primary-400" size={24} />
+                                        </div>
+                                        <h3 className="text-xl font-bold">NutriMind Insight</h3>
+                                    </div>
+
+                                    <p className="text-gray-300 leading-relaxed text-lg mb-4">{mealData.recommendation}</p>
+
+                                    {mealData.warnings?.length > 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            whileInView={{ opacity: 1, height: 'auto' }}
+                                            transition={{ delay: 0.3 }}
+                                            className="space-y-3 mt-6 pt-6 border-t border-white/10"
+                                        >
+                                            <p className="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                                                <AlertTriangle size={14} /> Critical Warnings
+                                            </p>
+                                            {mealData.warnings.map((w, i) => (
+                                                <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-200">
+                                                    {w}
+                                                </div>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Today's Logged Meals */}
-            <div className="mt-12">
+            <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.6 }}
+                className="mt-12"
+            >
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-sm font-bold tracking-widest text-gray-400 uppercase">Today's Meals</h3>
                     {todaysMeals.length > 0 && (
@@ -664,7 +815,7 @@ const FoodDetection = () => {
                         ))}
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 };

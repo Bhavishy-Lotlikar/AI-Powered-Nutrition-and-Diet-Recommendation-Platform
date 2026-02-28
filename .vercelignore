@@ -1,0 +1,6 @@
+nurtimind-api/
+nurtimind-api-src/
+requirements.txt
+server.js
+python_backend/
+*.py

@@ -25,3 +25,7 @@ dist-ssr
 
 # env
 .env
+
+# Dashboard images
+public/Home/
+.vercel

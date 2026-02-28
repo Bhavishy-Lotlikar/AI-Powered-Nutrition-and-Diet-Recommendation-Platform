@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { AlertTriangle, Target, Save, Loader2, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { fetchTodaysMeals } from '../api/mealApi';
 import { fetchNutritionGoals, saveNutritionGoals } from '../api/summaryApi';
@@ -120,7 +121,12 @@ const NutritionAnalysis = () => {
             <p className="text-gray-500 dark:text-gray-400 mb-8">Track your daily nutrition intake against your personal goals.</p>
 
             {/* Goal Setting Panel */}
-            <div className="bg-white dark:bg-dark-800 rounded-3xl p-6 border border-gray-100 dark:border-dark-700 shadow-sm mb-8">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-white dark:bg-dark-800 rounded-3xl p-6 border border-gray-100 dark:border-dark-700 shadow-sm mb-8"
+            >
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                         <Target className="text-primary-500" size={20} />
@@ -171,11 +177,17 @@ const NutritionAnalysis = () => {
                         </div>
                     ))}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Comparison Chart */}
             <div className="grid lg:grid-cols-3 gap-6 mb-8">
-                <div className="lg:col-span-2 bg-white dark:bg-dark-800 p-6 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm">
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    className="lg:col-span-2 bg-white dark:bg-dark-800 p-6 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm"
+                >
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Consumed vs Goal</h2>
                     <div className="flex gap-6 mb-4">
                         <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-primary-500"></div><span className="text-sm text-gray-500">Consumed</span></div>
@@ -193,10 +205,16 @@ const NutritionAnalysis = () => {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Macro Pie Chart */}
-                <div className="bg-white dark:bg-dark-800 p-6 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm">
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="bg-white dark:bg-dark-800 p-6 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm"
+                >
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Macro Split</h2>
                     <div className="h-44 mb-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -221,16 +239,23 @@ const NutritionAnalysis = () => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             {/* Deficiency Warnings */}
             {deficiencies.length > 0 && (
-                <div>
+                <div className="mb-8">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Deficiency Warnings</h2>
                     <div className="space-y-3">
-                        {deficiencies.map(item => (
-                            <div key={item.name} className="bg-white dark:bg-dark-800 p-5 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm">
+                        {deficiencies.map((item, index) => (
+                            <motion.div
+                                key={item.name}
+                                initial={{ opacity: 0, x: -20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                transition={{ duration: 0.4, delay: index * 0.1 }}
+                                className="bg-white dark:bg-dark-800 p-5 rounded-3xl border border-gray-100 dark:border-dark-700 shadow-sm"
+                            >
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
                                         <AlertTriangle size={18} className={item.pct < 50 ? 'text-red-500' : 'text-amber-500'} />
@@ -241,7 +266,7 @@ const NutritionAnalysis = () => {
                                 <div className="w-full h-2 bg-gray-100 dark:bg-dark-700 rounded-full overflow-hidden">
                                     <div className={`h-full rounded-full transition-all ${item.pct < 50 ? 'bg-red-400' : 'bg-amber-400'}`} style={{ width: `${Math.min(item.pct, 100)}%` }}></div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
                 </div>
